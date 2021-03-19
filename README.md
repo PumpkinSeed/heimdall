@@ -1,5 +1,4 @@
-# Argus
-The greek giant monster of secrets
+# Heimdall
 
 - AES-CBC-256 with Shamir's secret splitted IV
 - Shamir package provided by [hashicorp vault](https://pkg.go.dev/github.com/hashicorp/vault/shamir)
