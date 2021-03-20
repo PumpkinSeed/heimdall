@@ -2,8 +2,8 @@ package server
 
 import (
 	"github.com/PumpkinSeed/heimdall/cmd/server/flags"
-	"github.com/PumpkinSeed/heimdall/pkg/api/grpc"
-	"github.com/PumpkinSeed/heimdall/pkg/api/rest"
+	"github.com/PumpkinSeed/heimdall/internal/api/grpc"
+	"github.com/PumpkinSeed/heimdall/internal/api/rest"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
