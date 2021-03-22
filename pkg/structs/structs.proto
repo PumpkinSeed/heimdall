@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+option go_package = "pkg/structs";
+
+service Encryption {
+    rpc CreateKey (Key) returns (KeyResponse);
+    rpc ReadKey (KeyName) returns (KeyResponse);
+    rpc DeleteKey (KeyName) returns (KeyResponse);
+    rpc ListKeys (Empty) returns (KeyListResponse);
+
+    rpc Encrypt (EncryptRequest) returns (CryptoResult);
+    rpc Decrypt (DecryptRequest) returns (CryptoResult);
+}
+
+message Empty {
+}
+
+message KeyName {
+    string name = 1;
+}
+
+message Key {
+    string name = 1;
+    EncryptionType type = 2;
+}
+
+message KeyResponse {
+    Status status = 1;
+    string message = 2;
+    Key key = 3;
+}
+
+message KeyListResponse {
+    Status status = 1;
+    string message = 2;
+    repeated Key keys = 3;
+}
+
+enum EncryptionType {
+    AES256_GCM96 = 0;
+    CHACHA20_POLY1305 = 1;
+}
+
+enum Status {
+    UNKNOWN = 0;
+    SUCCESS = 1;
+    ERROR = 2;
+}
+
+message EncryptRequest {
+    string keyName = 1;
+    string plainText = 2;
+    string nonce = 3;
+    int64 keyVersion = 4;
+}
+
+message DecryptRequest {
+    string keyName = 1;
+    string ciphertext = 2;
+    string nonce = 3;
+    int64 keyVersion = 4;
+}
+
+message CryptoResult {
+    string result = 1;
+}
