@@ -7,16 +7,13 @@ import (
 	"google.golang.org/grpc"
 )
 
-func Serve(errCh chan error, addr string) {
-	// TODO implement it
-	go func() {
-		log.Infof("gRPC server listening on %s", addr)
-		lis, err := net.Listen("tcp", addr)
-		if err != nil {
-			errCh <- err
-		}
-		server := grpc.NewServer()
-		// TODO register servers
-		errCh <- server.Serve(lis)
-	}()
+func Serve(addr string) error {
+	lis, err := net.Listen("tcp", addr)
+	if err != nil {
+		return err
+	}
+	server := grpc.NewServer()
+	// TODO register servers
+	log.Infof("gRPC server listening on %s", addr)
+	return server.Serve(lis)
 }

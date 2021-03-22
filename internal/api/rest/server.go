@@ -6,10 +6,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func Serve(err chan error, addr string) {
-	go func() {
+func Serve(addr string) error {
 		log.Infof("HTTP server listening on %s", addr)
 		// TODO implement it, http.ListenAndServe is temporary to imitate blocking
-		err <- http.ListenAndServe(addr, nil)
-	}()
+		return http.ListenAndServe(addr, nil)
 }
