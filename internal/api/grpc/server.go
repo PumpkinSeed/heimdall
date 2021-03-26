@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 
+	"github.com/PumpkinSeed/heimdall/pkg/crypto"
 	"github.com/PumpkinSeed/heimdall/pkg/structs"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -21,7 +22,7 @@ func Serve(addr string) error {
 }
 
 type server struct {
-	// TODO add pkg/crypto
+	cry crypto.Crypto
 }
 
 func (s server) CreateKey(ctx context.Context, key *structs.Key) (*structs.KeyResponse, error) {
@@ -48,3 +49,13 @@ func (s server) Decrypt(ctx context.Context, request *structs.DecryptRequest) (*
 	panic("implement me")
 }
 
+func (s server) Unseal(ctx context.Context, request *structs.UnsealRequest) (*structs.UnsealResponse, error) {
+	unseal, err := s.cry.Unseal(ctx, request.Key)
+	if err != nil {
+		log.Debugf("unsealing key: %s", request.Key)
+		log.Errorf("error unsealing: %v", err)
+		return nil, err
+	}
+
+	return &unseal, nil
+}
