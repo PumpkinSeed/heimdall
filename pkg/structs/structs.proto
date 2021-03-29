@@ -10,8 +10,6 @@ service Encryption {
 
     rpc Encrypt (EncryptRequest) returns (CryptoResult);
     rpc Decrypt (DecryptRequest) returns (CryptoResult);
-
-    rpc Unseal (UnsealRequest) returns (UnsealResponse);
 }
 
 message Empty {
@@ -65,14 +63,4 @@ message DecryptRequest {
 
 message CryptoResult {
     string result = 1;
-}
-
-message UnsealRequest {
-    string key = 1;
-}
-
-message UnsealResponse {
-    int32 process = 1;
-    int32 threshold = 2;
-    bool unsealed = 3;
 }

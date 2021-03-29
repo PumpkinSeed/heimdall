@@ -48,14 +48,3 @@ func (s server) Encrypt(ctx context.Context, request *structs.EncryptRequest) (*
 func (s server) Decrypt(ctx context.Context, request *structs.DecryptRequest) (*structs.CryptoResult, error) {
 	panic("implement me")
 }
-
-func (s server) Unseal(ctx context.Context, request *structs.UnsealRequest) (*structs.UnsealResponse, error) {
-	unseal, err := s.cry.Unseal(ctx, request.Key)
-	if err != nil {
-		log.Debugf("unsealing key: %s", request.Key)
-		log.Errorf("error unsealing: %v", err)
-		return nil, err
-	}
-
-	return &unseal, nil
-}
