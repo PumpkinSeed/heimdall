@@ -62,7 +62,6 @@ func Init(ctx context.Context, b physical.Backend, mk []byte) (*Keyring, error) 
 		return nil, errors.New("term mis-match")
 	}
 
-
 	gcm, err := AeadFromKey(mk)
 	if err != nil {
 		return nil, err
@@ -70,7 +69,7 @@ func Init(ctx context.Context, b physical.Backend, mk []byte) (*Keyring, error) 
 
 	// Decrypt the barrier init key
 	keyring, err := utils.BarrierDecrypt(keyringPath, gcm, out.Value)
-	//defer memzero(plain)
+	defer utils.Memzero(keyring)
 	if err != nil {
 		return nil, err
 	}
@@ -79,6 +78,7 @@ func Init(ctx context.Context, b physical.Backend, mk []byte) (*Keyring, error) 
 	if err != nil {
 		return nil, err
 	}
+
 	return keyringDes, nil
 }
 
