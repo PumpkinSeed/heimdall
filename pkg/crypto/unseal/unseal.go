@@ -5,8 +5,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 
-	"github.com/PumpkinSeed/heimdall/internal/crypto/keyring"
-	"github.com/PumpkinSeed/heimdall/internal/crypto/utils"
+	"github.com/PumpkinSeed/heimdall/pkg/crypto/keyring"
+	"github.com/PumpkinSeed/heimdall/pkg/crypto/utils"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/aead"
 	"github.com/hashicorp/vault/sdk/physical"

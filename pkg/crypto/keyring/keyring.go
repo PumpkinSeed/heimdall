@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/PumpkinSeed/heimdall/internal/crypto/utils"
+	"github.com/PumpkinSeed/heimdall/pkg/crypto/utils"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault"
