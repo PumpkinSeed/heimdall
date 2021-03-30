@@ -87,4 +87,6 @@ func TestUnseal_Keyring(t *testing.T) {
 	err := u.Keyring(ctx, m)
 	assert.Nil(t, err)
 	assert.NotNil(t, u.keyring)
+	assert.Equal(t, expectedMasterKey, u.keyring.MasterKey())
+	assert.Equal(t, uint32(1), u.keyring.ActiveTerm())
 }

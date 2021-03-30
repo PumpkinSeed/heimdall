@@ -15,7 +15,7 @@ import (
 
 const coreMountConfigPath = "core/mounts"
 
-func Mount(ctx context.Context, b physical.Backend, kr *keyring.Keyring) (*vault.MountTable, error) {
+func Mount(ctx context.Context, b physical.Backend, kr *vault.Keyring) (*vault.MountTable, error) {
 	mountsData, err := b.Get(ctx, coreMountConfigPath)
 	if err != nil {
 		return nil, err
@@ -29,7 +29,7 @@ func Mount(ctx context.Context, b physical.Backend, kr *keyring.Keyring) (*vault
 	if term != 1 {
 		return nil, errors.New("term mis-match")
 	}
-	localGCM, err := kr.AeadForTerm(term)
+	localGCM, err := keyring.AeadForTerm(kr, term)
 	if err != nil {
 		return nil, err
 	}

@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/go-kms-wrapping/wrappers/aead"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/shamir"
+	"github.com/hashicorp/vault/vault"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -25,7 +26,7 @@ const (
 
 type unseal struct {
 	masterKey []byte
-	keyring   *keyring.Keyring
+	keyring   *vault.Keyring
 	MountID   string
 	tempKeys  [][]byte
 }

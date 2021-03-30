@@ -7,10 +7,8 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/utils"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -24,30 +22,8 @@ var (
 	ErrGCMCreate   = errors.New("failed to initialize GCM mode")
 )
 
-type Keyring struct {
-	masterKey  []byte
-	keys       map[uint32]*Key
-	activeTerm uint32
-}
 
-type Key struct {
-	Term        uint32
-	Version     int
-	Value       []byte
-	InstallTime time.Time
-	Encryptions uint64 `json:"encryptions,omitempty"`
-}
-
-// NewKeyring creates a new Keyring
-func newKeyring() *Keyring {
-	k := &Keyring{
-		keys:       make(map[uint32]*Key),
-		activeTerm: 0,
-	}
-	return k
-}
-
-func Init(ctx context.Context, b physical.Backend, mk []byte) (*Keyring, error) {
+func Init(ctx context.Context, b physical.Backend, mk []byte) (*vault.Keyring, error) {
 	out, err := b.Get(ctx, Path)
 	if err != nil {
 		return nil, err
@@ -74,7 +50,7 @@ func Init(ctx context.Context, b physical.Backend, mk []byte) (*Keyring, error) 
 		return nil, err
 	}
 
-	keyringDes, err := Deserialize(keyring)
+	keyringDes, err := vault.DeserializeKeyring(keyring)
 	if err != nil {
 		return nil, err
 	}
@@ -82,31 +58,11 @@ func Init(ctx context.Context, b physical.Backend, mk []byte) (*Keyring, error) 
 	return keyringDes, nil
 }
 
-func Deserialize(buf []byte) (*Keyring, error) {
-	// Deserialize the Keyring
-	var enc vault.EncodedKeyring
-	if err := jsonutil.DecodeJSON(buf, &enc); err != nil {
-		return nil, fmt.Errorf("deserialization failed: %w", err)
-	}
 
-	// Create a new Keyring
-	k := newKeyring()
-	k.masterKey = enc.MasterKey
-	//k.rotationConfig = enc.RotationConfig
-	//k.rotationConfig.Sanitize()
-	for _, key := range enc.Keys {
-		k.keys[key.Term] = (*Key)(key)
-		if key.Term > k.activeTerm {
-			k.activeTerm = key.Term
-		}
-	}
-	return k, nil
-}
-
-func (kr *Keyring) AeadForTerm(term uint32) (cipher.AEAD, error) {
+func AeadForTerm(kr *vault.Keyring, term uint32) (cipher.AEAD, error) {
 	// Read the underlying Key
-	key, ok := kr.keys[term]
-	if !ok {
+	key := kr.TermKey(term)
+	if key == nil {
 		return nil, ErrMissingTerm
 	}
 
