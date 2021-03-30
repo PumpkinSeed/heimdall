@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	keyringPath = "core/keyring"
+	Path = "core/keyring"
 )
 
 var (
@@ -48,7 +48,7 @@ func newKeyring() *Keyring {
 }
 
 func Init(ctx context.Context, b physical.Backend, mk []byte) (*Keyring, error) {
-	out, err := b.Get(ctx, keyringPath)
+	out, err := b.Get(ctx, Path)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +68,7 @@ func Init(ctx context.Context, b physical.Backend, mk []byte) (*Keyring, error) 
 	}
 
 	// Decrypt the barrier init key
-	keyring, err := utils.BarrierDecrypt(keyringPath, gcm, out.Value)
+	keyring, err := utils.BarrierDecrypt(Path, gcm, out.Value)
 	defer utils.Memzero(keyring)
 	if err != nil {
 		return nil, err

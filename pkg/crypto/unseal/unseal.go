@@ -20,7 +20,7 @@ import (
 const (
 	threshold = 3
 
-	storedBarrierKeysPath = "core/hsm/barrier-unseal-keys"
+	BarrierKeysPath = "core/hsm/barrier-unseal-keys"
 )
 
 type unseal struct {
@@ -96,7 +96,7 @@ func (u unseal) Mount(ctx context.Context, b physical.Backend) error {
 }
 
 func (u *unseal) unseal(ctx context.Context, b physical.Backend) error {
-	masterData, err := b.Get(ctx, storedBarrierKeysPath)
+	masterData, err := b.Get(ctx, BarrierKeysPath)
 	if err != nil {
 		return err
 	}
