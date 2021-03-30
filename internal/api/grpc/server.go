@@ -6,11 +6,12 @@ import (
 
 	"github.com/PumpkinSeed/heimdall/pkg/crypto"
 	"github.com/PumpkinSeed/heimdall/pkg/structs"
+	"github.com/hashicorp/vault/sdk/physical"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
 
-func Serve(addr string) error {
+func Serve(addr string, b physical.Backend) error {
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err

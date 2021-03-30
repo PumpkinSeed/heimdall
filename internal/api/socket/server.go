@@ -9,12 +9,11 @@ import (
 
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/utils"
+	"github.com/hashicorp/vault/sdk/physical"
 	log "github.com/sirupsen/logrus"
 )
 
-const Path = "/tmp/heimdall.sock"
-
-func Serve(addr string) error {
+func Serve(addr string, b physical.Backend) error {
 	ln, err := net.Listen("unix", addr)
 	if err != nil {
 		return err
