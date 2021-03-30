@@ -1,11 +1,14 @@
 package socket
 
 import (
+	"context"
 	"net"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
+	"github.com/PumpkinSeed/heimdall/pkg/crypto/utils"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -17,6 +20,8 @@ func Serve(addr string) error {
 		return err
 	}
 	log.Infof("Socket listening on %s", addr)
+
+	// TODO handle race here
 	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc, os.Interrupt, syscall.SIGTERM)
 	go func(ln net.Listener, c chan os.Signal) {
@@ -38,18 +43,63 @@ func Serve(addr string) error {
 
 func serve(c net.Conn) {
 	for {
-		buf := make([]byte, 512)
-		nr, err := c.Read(buf)
+		data, err := bindInput(c)
 		if err != nil {
+			writeStr(c, "invalid input")
+
+			return
+		}
+		u := unseal.Get()
+		ctx := context.Background()
+		done, err := u.Unseal(ctx, nil, string(data))
+		if err != nil {
+			writeError(c, u.Status(), err)
+
+			return
+		}
+		if !done {
+			writeStr(c, u.Status().String())
+
 			return
 		}
 
-		data := buf[0:nr]
-		// TODO do the unsealing here
-		log.Debugf("Server got: %s", string(data))
-		_, err = c.Write(data)
-		if err != nil {
-			log.Fatal("Writing client error: ", err)
+		if err := u.Keyring(ctx, nil); err != nil {
+			writeError(c, u.Status(), err)
+
+			return
 		}
+
+		if err := u.Mount(ctx, nil); err != nil {
+			writeError(c, u.Status(), err)
+
+			return
+		}
+	}
+}
+
+func bindInput(c net.Conn) ([]byte, error) {
+	buf := make([]byte, 512)
+	nr, err := c.Read(buf)
+	if err != nil {
+		return nil, err
+	}
+	defer utils.Memzero(buf)
+
+	return buf[0:nr], nil
+}
+
+func writeError(c net.Conn, s unseal.Status, err error) {
+	writeStr(c, "Error:\n")
+	writeStr(c, s.String())
+	writeStr(c, err.Error())
+}
+
+func writeStr(c net.Conn, s string) {
+	write(c, []byte(s))
+}
+
+func write(c net.Conn, v []byte) {
+	if _, err := c.Write(v); err != nil {
+		log.Fatal(err)
 	}
 }

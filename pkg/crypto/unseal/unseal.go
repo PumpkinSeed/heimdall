@@ -99,6 +99,15 @@ func (u *unseal) Mount(ctx context.Context, b physical.Backend) error {
 	return nil
 }
 
+func (u unseal) Status() Status {
+	return Status{
+		TotalShares: 5, // TODO make this configurable
+		Threshold:   threshold,
+		Process:     len(u.tempKeys),
+		Unsealed:    u.masterKey != nil,
+	}
+}
+
 func (u *unseal) unseal(ctx context.Context, b physical.Backend) error {
 	masterData, err := b.Get(ctx, BarrierKeysPath)
 	if err != nil {
