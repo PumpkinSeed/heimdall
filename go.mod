@@ -8,6 +8,7 @@ require (
 	github.com/hashicorp/vault v1.7.0
 	github.com/hashicorp/vault/sdk v0.1.14-0.20210322210658-b52b8b8c1264
 	github.com/sirupsen/logrus v1.8.1
+	github.com/stretchr/testify v1.7.0
 	github.com/urfave/cli/v2 v2.3.0
 	golang.org/x/net v0.0.0-20210316092652-d523dce5a7f4 // indirect
 	golang.org/x/sys v0.0.0-20210319071255-635bc2c9138d // indirect

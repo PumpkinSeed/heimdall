@@ -27,11 +27,11 @@ type unseal struct {
 	masterKey []byte
 	keyring   *keyring.Keyring
 	MountID   string
+	tempKeys  [][]byte
 }
 
 var (
-	tempKeys [][]byte
-	u        *unseal
+	u *unseal
 )
 
 func Get() *unseal {
@@ -43,23 +43,23 @@ func Get() *unseal {
 
 // First step to start the server
 func (u *unseal) Unseal(ctx context.Context, b physical.Backend, key string) (bool, error) {
-	defer cleanTempKeys()
-	if len(tempKeys) < threshold {
+	defer u.cleanTempKeys()
+	if len(u.tempKeys) < threshold {
 		rk, err := base64.StdEncoding.DecodeString(key)
 		if err != nil {
 			return false, err
 		}
-		tempKeys = append(tempKeys, rk)
+		u.tempKeys = append(u.tempKeys, rk)
 	}
-	if len(tempKeys) == threshold {
+	if len(u.tempKeys) == threshold {
 		return true, u.unseal(ctx, b)
 	}
 
 	return false, nil
 }
 
-//
-func (u *unseal) InitKeyring(ctx context.Context, b physical.Backend) error {
+// Keyring is getting keyring from database and decrypt it with the master key
+func (u *unseal) Keyring(ctx context.Context, b physical.Backend) error {
 	if u.masterKey == nil {
 		return errors.New("server is still sealed, unseal it before do anything")
 	}
@@ -73,6 +73,7 @@ func (u *unseal) InitKeyring(ctx context.Context, b physical.Backend) error {
 	return nil
 }
 
+// Mount is mounting transit, getting the MountTable from database and decrypt it
 func (u unseal) Mount(ctx context.Context, b physical.Backend) error {
 	if u.masterKey == nil {
 		return errors.New("server is still sealed, unseal it before do anything")
@@ -85,7 +86,7 @@ func (u unseal) Mount(ctx context.Context, b physical.Backend) error {
 
 	for _, e := range table.Entries {
 		if strings.HasPrefix(e.Path, "transit/") {
-			u.MountID = table.Entries[2].UUID
+			u.MountID = e.UUID
 
 			break
 		}
@@ -99,7 +100,7 @@ func (u *unseal) unseal(ctx context.Context, b physical.Backend) error {
 	if err != nil {
 		return err
 	}
-	unsealed, err := shamir.Combine(tempKeys)
+	unsealed, err := shamir.Combine(u.tempKeys)
 	if err != nil {
 		return err
 	}
@@ -131,11 +132,11 @@ func (u *unseal) unseal(ctx context.Context, b physical.Backend) error {
 	return nil
 }
 
-func cleanTempKeys() {
-	if len(tempKeys) >= threshold {
-		for _, key := range tempKeys {
+func (u *unseal) cleanTempKeys() {
+	if len(u.tempKeys) >= threshold {
+		for _, key := range u.tempKeys {
 			utils.Memzero(key)
 		}
-		tempKeys = [][]byte{}
+		u.tempKeys = [][]byte{}
 	}
 }
