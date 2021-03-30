@@ -75,9 +75,12 @@ func (u *unseal) Keyring(ctx context.Context, b physical.Backend) error {
 }
 
 // Mount is mounting transit, getting the MountTable from database and decrypt it
-func (u unseal) Mount(ctx context.Context, b physical.Backend) error {
+func (u *unseal) Mount(ctx context.Context, b physical.Backend) error {
 	if u.masterKey == nil {
 		return errors.New("server is still sealed, unseal it before do anything")
+	}
+	if u.keyring == nil {
+		return errors.New("missing keyring, init keyring first")
 	}
 
 	table, err := mount.Mount(ctx, b, u.keyring)
@@ -86,7 +89,7 @@ func (u unseal) Mount(ctx context.Context, b physical.Backend) error {
 	}
 
 	for _, e := range table.Entries {
-		if strings.HasPrefix(e.Path, "transit/") {
+		if strings.EqualFold(e.Type, "transit") {
 			u.MountID = e.UUID
 
 			break

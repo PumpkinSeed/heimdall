@@ -13,10 +13,10 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-const coreMountConfigPath = "core/mounts"
+const CorePath = "core/mounts"
 
 func Mount(ctx context.Context, b physical.Backend, kr *vault.Keyring) (*vault.MountTable, error) {
-	mountsData, err := b.Get(ctx, coreMountConfigPath)
+	mountsData, err := b.Get(ctx, CorePath)
 	if err != nil {
 		return nil, err
 	}
@@ -35,7 +35,7 @@ func Mount(ctx context.Context, b physical.Backend, kr *vault.Keyring) (*vault.M
 	}
 
 	// Decrypt the barrier init key
-	mounts, err := utils.BarrierDecrypt(coreMountConfigPath, localGCM, mountsData.Value)
+	mounts, err := utils.BarrierDecrypt(CorePath, localGCM, mountsData.Value)
 	defer utils.Memzero(mounts)
 	if err != nil {
 		return nil, err
