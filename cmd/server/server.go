@@ -5,6 +5,7 @@ import (
 	"github.com/PumpkinSeed/heimdall/internal/api/grpc"
 	"github.com/PumpkinSeed/heimdall/internal/api/rest"
 	"github.com/PumpkinSeed/heimdall/internal/api/socket"
+	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	"github.com/PumpkinSeed/heimdall/pkg/storage"
 	"github.com/hashicorp/vault/sdk/physical"
 	log "github.com/sirupsen/logrus"
@@ -14,10 +15,12 @@ import (
 var Cmd = &cli.Command{
 	Name:   "server",
 	Action: serve,
+	Before: setup,
 	Flags: []cli.Flag{
 		flags.Grpc,
 		flags.Rest,
 		flags.Socket,
+		flags.Threshold,
 		flags.ConsulAddress,
 		flags.ConsulToken,
 	},
@@ -53,4 +56,10 @@ func serverExecutor(fn func(string, physical.Backend) error, str string, b physi
 		}
 		finisher <- struct{}{}
 	}()
+}
+
+func setup(ctx *cli.Context) error {
+	unseal.Get().Init(ctx.Int(flags.NameThreshold))
+
+	return nil
 }

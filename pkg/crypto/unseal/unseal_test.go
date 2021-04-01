@@ -37,7 +37,7 @@ func (m mockBackend) List(ctx context.Context, prefix string) ([]string, error) 
 }
 
 func TestUnseal_Unseal(t *testing.T) {
-	u := unseal{}
+	u := Unseal{threshold: 3}
 
 	ctx := context.Background()
 
@@ -68,7 +68,7 @@ func TestUnseal_Unseal(t *testing.T) {
 }
 
 func TestUnseal_Keyring(t *testing.T) {
-	u := unseal{masterKey: expectedMasterKey}
+	u := Unseal{masterKey: expectedMasterKey, threshold: 3}
 
 	ctx := context.Background()
 
@@ -95,9 +95,10 @@ func TestUnseal_Keyring(t *testing.T) {
 }
 
 func TestUnseal_Mount(t *testing.T) {
-	u := unseal{
+	u := Unseal{
 		masterKey: expectedMasterKey,
 		keyring:   givenKeyring(),
+		threshold: 3,
 	}
 
 	ctx := context.Background()

@@ -19,40 +19,43 @@ import (
 )
 
 const (
-	threshold = 3
-
 	BarrierKeysPath = "core/hsm/barrier-unseal-keys"
 )
 
-type unseal struct {
+type Unseal struct {
 	masterKey []byte
 	keyring   *vault.Keyring
 	MountID   string
 	tempKeys  [][]byte
+	threshold int
 }
 
 var (
-	u *unseal
+	u *Unseal
 )
 
-func Get() *unseal {
+func Get() *Unseal {
 	if u == nil {
-		u = &unseal{}
+		u = &Unseal{}
 	}
 	return u
 }
 
+func (u *Unseal) Init(t int) {
+	u.threshold = t
+}
+
 // First step to start the server
-func (u *unseal) Unseal(ctx context.Context, b physical.Backend, key string) (bool, error) {
+func (u *Unseal) Unseal(ctx context.Context, b physical.Backend, key string) (bool, error) {
 	defer u.cleanTempKeys()
-	if len(u.tempKeys) < threshold {
+	if len(u.tempKeys) < u.threshold {
 		rk, err := base64.StdEncoding.DecodeString(key)
 		if err != nil {
 			return false, err
 		}
 		u.tempKeys = append(u.tempKeys, rk)
 	}
-	if len(u.tempKeys) >= threshold {
+	if len(u.tempKeys) >= u.threshold {
 		return true, u.unseal(ctx, b)
 	}
 
@@ -60,7 +63,7 @@ func (u *unseal) Unseal(ctx context.Context, b physical.Backend, key string) (bo
 }
 
 // Keyring is getting keyring from database and decrypt it with the master key
-func (u *unseal) Keyring(ctx context.Context, b physical.Backend) error {
+func (u *Unseal) Keyring(ctx context.Context, b physical.Backend) error {
 	if u.masterKey == nil {
 		return errors.New("server is still sealed, unseal it before do anything")
 	}
@@ -75,7 +78,7 @@ func (u *unseal) Keyring(ctx context.Context, b physical.Backend) error {
 }
 
 // Mount is mounting transit, getting the MountTable from database and decrypt it
-func (u *unseal) Mount(ctx context.Context, b physical.Backend) error {
+func (u *Unseal) Mount(ctx context.Context, b physical.Backend) error {
 	if u.masterKey == nil {
 		return errors.New("server is still sealed, unseal it before do anything")
 	}
@@ -99,16 +102,16 @@ func (u *unseal) Mount(ctx context.Context, b physical.Backend) error {
 	return nil
 }
 
-func (u unseal) Status() Status {
+func (u Unseal) Status() Status {
 	return Status{
 		TotalShares: 5, // TODO make this configurable
-		Threshold:   threshold,
+		Threshold:   u.threshold,
 		Process:     len(u.tempKeys),
 		Unsealed:    u.masterKey != nil,
 	}
 }
 
-func (u *unseal) unseal(ctx context.Context, b physical.Backend) error {
+func (u *Unseal) unseal(ctx context.Context, b physical.Backend) error {
 	masterData, err := b.Get(ctx, BarrierKeysPath)
 	if err != nil {
 		return err
@@ -145,8 +148,8 @@ func (u *unseal) unseal(ctx context.Context, b physical.Backend) error {
 	return nil
 }
 
-func (u *unseal) cleanTempKeys() {
-	if len(u.tempKeys) >= threshold {
+func (u *Unseal) cleanTempKeys() {
+	if len(u.tempKeys) >= u.threshold {
 		for _, key := range u.tempKeys {
 			utils.Memzero(key)
 		}
