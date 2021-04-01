@@ -5,7 +5,7 @@ import (
 	"net"
 	"sync"
 
-	"github.com/PumpkinSeed/heimdall/internal/api/socket"
+	"github.com/PumpkinSeed/heimdall/cmd/server/flags"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -16,7 +16,7 @@ var Cmd = &cli.Command{
 }
 
 func action(ctx *cli.Context) error {
-	c, err := net.Dial("unix", socket.Path)
+	c, err := net.Dial("unix", ctx.String(flags.NameSocket))
 	if err != nil {
 		return err
 	}

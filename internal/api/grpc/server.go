@@ -4,12 +4,14 @@ import (
 	"context"
 	"net"
 
+	"github.com/PumpkinSeed/heimdall/pkg/crypto"
 	"github.com/PumpkinSeed/heimdall/pkg/structs"
+	"github.com/hashicorp/vault/sdk/physical"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
 
-func Serve(addr string) error {
+func Serve(addr string, b physical.Backend) error {
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
@@ -21,7 +23,7 @@ func Serve(addr string) error {
 }
 
 type server struct {
-	// TODO add pkg/crypto
+	crypto crypto.Crypto
 }
 
 func (s server) CreateKey(ctx context.Context, key *structs.Key) (*structs.KeyResponse, error) {
@@ -47,4 +49,3 @@ func (s server) Encrypt(ctx context.Context, request *structs.EncryptRequest) (*
 func (s server) Decrypt(ctx context.Context, request *structs.DecryptRequest) (*structs.CryptoResult, error) {
 	panic("implement me")
 }
-
