@@ -77,7 +77,7 @@ func serve(c net.Conn) {
 }
 
 func bindInput(c net.Conn) ([]byte, error) {
-	buf := make([]byte, 512)
+	buf := make([]byte, 32)
 	nr, err := c.Read(buf)
 	if err != nil {
 		return nil, err
