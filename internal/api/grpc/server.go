@@ -23,7 +23,7 @@ func Serve(addr string, b physical.Backend) error {
 }
 
 type server struct {
-	cry crypto.Crypto
+	crypto crypto.Crypto
 }
 
 func (s server) CreateKey(ctx context.Context, key *structs.Key) (*structs.KeyResponse, error) {

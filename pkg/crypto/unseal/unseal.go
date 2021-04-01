@@ -52,7 +52,7 @@ func (u *unseal) Unseal(ctx context.Context, b physical.Backend, key string) (bo
 		}
 		u.tempKeys = append(u.tempKeys, rk)
 	}
-	if len(u.tempKeys) == threshold {
+	if len(u.tempKeys) >= threshold {
 		return true, u.unseal(ctx, b)
 	}
 

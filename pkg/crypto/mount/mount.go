@@ -62,16 +62,7 @@ func decodeMountTable(ctx context.Context, raw []byte) (*vault.MountTable, error
 		if entry.NamespaceID == "" {
 			entry.NamespaceID = namespace.RootNamespaceID
 		}
-		//ns, err := NamespaceByID(ctx, entry.NamespaceID, c)
-		//if err != nil {
-		//	return nil, err
-		//}
-		//if ns == nil {
-		//	c.logger.Error("namespace on mount entry not found", "namespace_id", entry.NamespaceID, "mount_path", entry.Path, "mount_description", entry.Description)
-		//	continue
-		//}
 
-		//entry.namespace = ns
 		mountEntries = append(mountEntries, entry)
 	}
 
