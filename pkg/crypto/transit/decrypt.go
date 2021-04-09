@@ -37,8 +37,6 @@ func (t Transit) Decrypt(ctx context.Context, key string, req BatchRequestItem) 
 		return DecryptBatchResponseItem{}, fmt.Errorf("missing policy for key %s", key)
 	}
 
-	defer p.Unlock()
-
 	plaintext, err := p.Decrypt(req.DecodedContext, req.DecodedNonce, req.Ciphertext)
 	if err != nil {
 		return DecryptBatchResponseItem{}, err

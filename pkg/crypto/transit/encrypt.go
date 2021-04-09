@@ -16,8 +16,6 @@ func (t Transit) Encrypt(ctx context.Context, key string, req BatchRequestItem) 
 		return EncryptBatchResponseItem{}, fmt.Errorf("missing policy for key %s", key)
 	}
 
-	defer p.Unlock()
-
 	if _, err := base64.StdEncoding.DecodeString(req.Plaintext); err != nil {
 		return EncryptBatchResponseItem{}, err
 	}

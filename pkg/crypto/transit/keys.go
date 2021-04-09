@@ -28,6 +28,7 @@ func (t Transit) CreateKey(ctx context.Context, name, keyType string) error {
 	if policy == nil {
 		return errors.New("error generating key: returned policy was nil")
 	}
+	defer policy.Unlock()
 	if !upserted {
 		logrus.Warnf("key %s already existed", name)
 	}
