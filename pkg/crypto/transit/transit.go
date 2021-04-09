@@ -57,3 +57,8 @@ type EncryptBatchResponseItem struct {
 	KeyVersion int `json:"key_version,omitempty" structs:"key_version" mapstructure:"key_version"`
 }
 
+type DecryptBatchResponseItem struct {
+	// Plaintext for the ciphertext present in the corresponding batch
+	// request item
+	Plaintext string `json:"plaintext" structs:"plaintext" mapstructure:"plaintext"`
+}

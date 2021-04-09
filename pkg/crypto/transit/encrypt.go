@@ -5,8 +5,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-
-	"github.com/hashicorp/vault/sdk/helper/errutil"
 )
 
 func (t Transit) Encrypt(ctx context.Context, key string, req BatchRequestItem) (EncryptBatchResponseItem, error) {
@@ -41,12 +39,7 @@ func (t Transit) Encrypt(ctx context.Context, key string, req BatchRequestItem) 
 
 	ciphertext, err := p.Encrypt(req.KeyVersion, req.DecodedContext, req.DecodedNonce, req.Plaintext)
 	if err != nil {
-		switch err.(type) {
-		case errutil.UserError:
-			return EncryptBatchResponseItem{}, err
-		default:
-			return EncryptBatchResponseItem{}, err
-		}
+		return EncryptBatchResponseItem{}, err
 	}
 
 	if ciphertext == "" {
