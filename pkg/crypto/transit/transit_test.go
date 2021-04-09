@@ -4,19 +4,17 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hashicorp/vault/sdk/helper/keysutil"
-	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestTransit(t *testing.T) {
 	ctx := context.Background()
-	inmem := &logical.InmemStorage{}
-	lm, _ := keysutil.NewLockManager(false, 0)
-	tr := Transit{
-		lm:      lm,
-		storage: inmem,
+	db, err := inmem.NewInmem(nil, nil)
+	if err != nil {
+		t.Fatal(err)
 	}
+	tr := New(db)
 
 	const keyName = "testkey"
 	if err := tr.CreateKey(ctx, keyName, ""); err != nil {
