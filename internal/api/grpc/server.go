@@ -78,7 +78,24 @@ func (s server) DeleteKey(ctx context.Context, key *structs.KeyName) (*structs.K
 }
 
 func (s server) ListKeys(ctx context.Context, _ *structs.Empty) (*structs.KeyListResponse, error) {
-	panic("implement me")
+	keys, err := s.transit.ListKeys(ctx)
+	if err != nil {
+		log.Errorf("Error getting keys: %v", err)
+	}
+
+	var keySlice = make([]*structs.Key, 0, len(keys))
+
+	for i := range keys {
+		keySlice[i] = &structs.Key{
+			Name: keys[i],
+		}
+	}
+
+	return &structs.KeyListResponse{
+		Status:  getStatus(err),
+		Message: getMessage(err),
+		Keys:    keySlice,
+	}, err
 }
 
 func (s server) Encrypt(ctx context.Context, req *structs.EncryptRequest) (*structs.CryptoResult, error) {

@@ -53,6 +53,10 @@ func (t Transit) GetKey(ctx context.Context, name string) (*keysutil.Policy, err
 	return p, nil
 }
 
+func (t Transit) ListKeys(ctx context.Context) ([]string, error) {
+	return t.storage.List(ctx, "policy/")
+}
+
 func (t Transit) DeleteKey(ctx context.Context, name string) error {
 	return t.lm.DeletePolicy(ctx, t.storage, name)
 }
