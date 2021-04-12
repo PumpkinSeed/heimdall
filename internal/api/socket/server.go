@@ -9,23 +9,26 @@ import (
 
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/utils"
-	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/vault"
 	log "github.com/sirupsen/logrus"
 )
 
-func Serve(addr string, b physical.Backend) error {
+func Serve(addr string, s vault.SecurityBarrier) error {
 	ln, err := net.Listen("unix", addr)
 	if err != nil {
 		return err
 	}
 	log.Infof("Socket listening on %s", addr)
 
+	u := unseal.Get()
+	u.SetBackend(s)
+
 	// TODO handle race here
 	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc, os.Interrupt, syscall.SIGTERM)
 	go func(ln net.Listener, c chan os.Signal) {
 		sig := <-c
-		log.Printf("Caught signal %s: shutting down.", sig)
+		log.Infof("Caught signal %s: shutting down.", sig)
 		ln.Close()
 		os.Exit(0)
 	}(ln, sigc)
@@ -33,14 +36,14 @@ func Serve(addr string, b physical.Backend) error {
 	for {
 		fd, err := ln.Accept()
 		if err != nil {
-			log.Fatal("Accept error: ", err)
+			log.Error("Accept error: ", err)
 		}
 
-		go serve(fd)
+		go serve(fd, u)
 	}
 }
 
-func serve(c net.Conn) {
+func serve(c net.Conn, u *unseal.Unseal) {
 	for {
 		data, err := bindInput(c)
 		if err != nil {
@@ -48,9 +51,8 @@ func serve(c net.Conn) {
 
 			return
 		}
-		u := unseal.Get()
 		ctx := context.Background()
-		done, err := u.Unseal(ctx, nil, string(data))
+		done, err := u.Unseal(ctx, string(data))
 		if err != nil {
 			writeError(c, u.Status(), err)
 
@@ -62,17 +64,18 @@ func serve(c net.Conn) {
 			return
 		}
 
-		if err := u.Keyring(ctx, nil); err != nil {
+		if err := u.Keyring(ctx); err != nil {
 			writeError(c, u.Status(), err)
 
 			return
 		}
 
-		if err := u.Mount(ctx, nil); err != nil {
+		if err := u.Mount(ctx); err != nil {
 			writeError(c, u.Status(), err)
 
 			return
 		}
+
 	}
 }
 
@@ -99,6 +102,6 @@ func writeStr(c net.Conn, s string) {
 
 func write(c net.Conn, v []byte) {
 	if _, err := c.Write(v); err != nil {
-		log.Fatal(err)
+		log.Error(err)
 	}
 }

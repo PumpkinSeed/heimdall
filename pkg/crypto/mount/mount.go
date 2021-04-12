@@ -9,13 +9,13 @@ import (
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/utils"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
 const CorePath = "core/mounts"
 
-func Mount(ctx context.Context, b physical.Backend, kr *vault.Keyring) (*vault.MountTable, error) {
+func Mount(ctx context.Context, b logical.Storage, kr *vault.Keyring) (*vault.MountTable, error) {
 	mountsData, err := b.Get(ctx, CorePath)
 	if err != nil {
 		return nil, err

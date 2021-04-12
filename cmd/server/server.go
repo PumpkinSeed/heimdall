@@ -8,6 +8,7 @@ import (
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	"github.com/PumpkinSeed/heimdall/pkg/storage"
 	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/vault"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -30,14 +31,24 @@ func serve(ctx *cli.Context) error {
 	finished := make(chan struct{}, 1)
 
 	b := createBackendConnection(ctx)
+	l := createLogicalStorage(b)
 
-	serverExecutor(grpc.Serve, ctx.String(flags.NameGrpc), b, finished)
-	serverExecutor(rest.Serve, ctx.String(flags.NameRest), b, finished)
-	serverExecutor(socket.Serve, ctx.String(flags.NameSocket), b, finished)
+	serverExecutor(grpc.Serve, ctx.String(flags.NameGrpc), l, finished)
+	serverExecutor(rest.Serve, ctx.String(flags.NameRest), l, finished)
+	serverExecutor(socket.Serve, ctx.String(flags.NameSocket), l, finished)
 
 	<-finished
 
 	return nil
+}
+
+func createLogicalStorage(b physical.Backend) vault.SecurityBarrier {
+	l, err := vault.NewAESGCMBarrier(b)
+	if err != nil {
+		panic(err)
+	}
+
+	return l
 }
 
 func createBackendConnection(ctx *cli.Context) physical.Backend {
@@ -49,7 +60,7 @@ func createBackendConnection(ctx *cli.Context) physical.Backend {
 	return b
 }
 
-func serverExecutor(fn func(string, physical.Backend) error, str string, b physical.Backend, finisher chan struct{}) {
+func serverExecutor(fn func(string, vault.SecurityBarrier) error, str string, b vault.SecurityBarrier, finisher chan struct{}) {
 	go func() {
 		if err := fn(str, b); err != nil {
 			log.Error(err)

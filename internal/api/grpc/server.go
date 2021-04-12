@@ -6,12 +6,12 @@ import (
 
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/transit"
 	"github.com/PumpkinSeed/heimdall/pkg/structs"
-	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/vault"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
 
-func Serve(addr string, b physical.Backend) error {
+func Serve(addr string, b vault.SecurityBarrier) error {
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
@@ -27,7 +27,7 @@ type server struct {
 	transit transit.Transit
 }
 
-func newServer(b physical.Backend) server {
+func newServer(b vault.SecurityBarrier) server {
 	return server{
 		transit: transit.New(b),
 	}

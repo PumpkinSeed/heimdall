@@ -2,16 +2,15 @@ package transit
 
 import (
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/vault"
 )
 
 type Transit struct {
 	lm      *keysutil.LockManager
-	storage logical.Storage
+	storage vault.SecurityBarrier
 }
 
-func New(db physical.Backend) Transit {
+func New(db vault.SecurityBarrier) Transit {
 	lm, err := keysutil.NewLockManager(false, 0)
 	if err != nil {
 		panic(err)
@@ -19,7 +18,7 @@ func New(db physical.Backend) Transit {
 
 	return Transit{
 		lm:      lm,
-		storage: logical.NewLogicalStorage(db),
+		storage: db,
 	}
 }
 
