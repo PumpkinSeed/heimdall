@@ -54,7 +54,7 @@ func createLogicalStorage(b physical.Backend) vault.SecurityBarrier {
 func createBackendConnection(ctx *cli.Context) physical.Backend {
 	b, err := storage.Create(ctx)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 
 	return b

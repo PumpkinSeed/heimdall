@@ -14,6 +14,10 @@ import (
 )
 
 func Serve(addr string, s vault.SecurityBarrier) error {
+	if err := os.RemoveAll(addr); err != nil {
+		return err
+	}
+
 	ln, err := net.Listen("unix", addr)
 	if err != nil {
 		return err
@@ -37,6 +41,7 @@ func Serve(addr string, s vault.SecurityBarrier) error {
 		fd, err := ln.Accept()
 		if err != nil {
 			log.Error("Accept error: ", err)
+			return err
 		}
 
 		go serve(fd, u)
@@ -45,6 +50,11 @@ func Serve(addr string, s vault.SecurityBarrier) error {
 
 func serve(c net.Conn, u *unseal.Unseal) {
 	for {
+		if u.Status().Unsealed {
+			writeStr(c, u.Status().String())
+
+			return
+		}
 		data, err := bindInput(c)
 		if err != nil {
 			writeStr(c, "invalid input")
@@ -76,6 +86,7 @@ func serve(c net.Conn, u *unseal.Unseal) {
 			return
 		}
 
+		utils.Memzero(data)
 	}
 }
 
@@ -85,7 +96,6 @@ func bindInput(c net.Conn) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer utils.Memzero(buf)
 
 	return buf[0:nr], nil
 }

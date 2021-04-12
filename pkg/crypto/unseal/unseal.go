@@ -16,20 +16,23 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault"
+	log "github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 )
 
 const (
-	BarrierKeysPath = "core/hsm/barrier-unseal-keys"
+	BarrierKeysPath    = "core/hsm/barrier-unseal-keys"
+	defaultTotalShares = 5
 )
 
 type Unseal struct {
-	masterKey []byte
-	keyring   *vault.Keyring
-	MountID   string
-	tempKeys  [][]byte
-	threshold int
-	sb        vault.SecurityBarrier
+	masterKey   []byte
+	keyring     *vault.Keyring
+	MountID     string
+	tempKeys    [][]byte
+	threshold   int
+	TotalShares int
+	sb          vault.SecurityBarrier
 }
 
 var (
@@ -38,7 +41,9 @@ var (
 
 func Get() *Unseal {
 	if u == nil {
-		u = &Unseal{}
+		u = &Unseal{
+			TotalShares: defaultTotalShares,
+		}
 	}
 	return u
 }
@@ -108,7 +113,12 @@ func (u *Unseal) Mount(ctx context.Context) error {
 	return nil
 }
 
-func (u Unseal) Status() Status {
+func (u *Unseal) Status() Status {
+	sealed, err := u.sb.Sealed()
+	if err != nil {
+		log.Error(err)
+	}
+	log.Debugf("Sealed: %v", sealed)
 	return Status{
 		TotalShares: 5, // TODO make this configurable
 		Threshold:   u.threshold,

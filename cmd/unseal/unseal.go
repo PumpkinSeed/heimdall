@@ -13,6 +13,9 @@ import (
 var Cmd = &cli.Command{
 	Name:   "unseal",
 	Action: action,
+	Flags: []cli.Flag{
+		flags.Socket,
+	},
 }
 
 func action(ctx *cli.Context) error {
