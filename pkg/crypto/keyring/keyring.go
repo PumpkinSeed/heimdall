@@ -9,7 +9,7 @@ import (
 	"fmt"
 
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/utils"
-	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -23,7 +23,7 @@ var (
 )
 
 
-func Init(ctx context.Context, b logical.Storage, mk []byte) (*vault.Keyring, error) {
+func Init(ctx context.Context, b physical.Backend, mk []byte) (*vault.Keyring, error) {
 	out, err := b.Get(ctx, Path)
 	if err != nil {
 		return nil, err

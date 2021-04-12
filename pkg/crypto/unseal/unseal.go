@@ -83,7 +83,7 @@ func (u *Unseal) Keyring(ctx context.Context) error {
 	if u.masterKey == nil {
 		return errors.New("server is still sealed, unseal it before do anything")
 	}
-	k, err := keyring.Init(ctx, u.sb, u.masterKey)
+	k, err := keyring.Init(ctx, u.b, u.masterKey)
 	if err != nil {
 		return err
 	}
@@ -102,7 +102,7 @@ func (u *Unseal) Mount(ctx context.Context) error {
 		return errors.New("missing keyring, init keyring first")
 	}
 
-	table, err := mount.Mount(ctx, u.sb, u.keyring)
+	table, err := mount.Mount(ctx, u.b, u.keyring)
 	if err != nil {
 		return err
 	}
@@ -167,7 +167,7 @@ func (u *Unseal) unseal(ctx context.Context) error {
 	u.masterKey = keys[0]
 
 	// TODO check seal key passing
-	if err := u.sb.Initialize(ctx, u.masterKey, []byte{}, rand.Reader); err != nil {
+	if err := u.sb.Initialize(ctx, u.masterKey, []byte{}, rand.Reader); err != nil && !errors.Is(err, vault.ErrBarrierAlreadyInit) {
 		return err
 	}
 

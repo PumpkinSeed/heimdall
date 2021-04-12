@@ -71,18 +71,21 @@ func serve(c net.Conn, u *unseal.Unseal) {
 			return
 		}
 		if !done {
+			log.Debug("Unseal not done yet")
 			writeStr(c, u.Status().String())
 
 			return
 		}
 
 		if err := u.Keyring(ctx); err != nil {
+			log.Debug("Keyring init error")
 			writeError(c, u.Status(), err)
 
 			return
 		}
 
 		if err := u.Mount(ctx); err != nil {
+			log.Debug("Mount error")
 			writeError(c, u.Status(), err)
 
 			return
@@ -93,7 +96,7 @@ func serve(c net.Conn, u *unseal.Unseal) {
 }
 
 func bindInput(c net.Conn) ([]byte, error) {
-	buf := make([]byte, 32)
+	buf := make([]byte, 44)
 	nr, err := c.Read(buf)
 	if err != nil {
 		return nil, err
