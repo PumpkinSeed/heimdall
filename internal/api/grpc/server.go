@@ -87,9 +87,9 @@ func (s server) ListKeys(ctx context.Context, _ *structs.Empty) (*structs.KeyLis
 	var keySlice = make([]*structs.Key, 0, len(keys))
 
 	for i := range keys {
-		keySlice[i] = &structs.Key{
+		keySlice = append(keySlice, &structs.Key{
 			Name: keys[i],
-		}
+		})
 	}
 
 	return &structs.KeyListResponse{
