@@ -9,11 +9,12 @@ import (
 
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/utils"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault"
 	log "github.com/sirupsen/logrus"
 )
 
-func Serve(addr string, s vault.SecurityBarrier) error {
+func Serve(addr string, b physical.Backend, sb vault.SecurityBarrier) error {
 	if err := os.RemoveAll(addr); err != nil {
 		return err
 	}
@@ -25,7 +26,8 @@ func Serve(addr string, s vault.SecurityBarrier) error {
 	log.Infof("Socket listening on %s", addr)
 
 	u := unseal.Get()
-	u.SetBackend(s)
+	u.SetBackend(b)
+	u.SetSecurityBarrier(sb)
 
 	// TODO handle race here
 	sigc := make(chan os.Signal, 1)

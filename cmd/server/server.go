@@ -33,9 +33,9 @@ func serve(ctx *cli.Context) error {
 	b := createBackendConnection(ctx)
 	l := createLogicalStorage(b)
 
-	serverExecutor(grpc.Serve, ctx.String(flags.NameGrpc), l, finished)
-	serverExecutor(rest.Serve, ctx.String(flags.NameRest), l, finished)
-	serverExecutor(socket.Serve, ctx.String(flags.NameSocket), l, finished)
+	serverExecutor(grpc.Serve, ctx.String(flags.NameGrpc), b, l, finished)
+	serverExecutor(rest.Serve, ctx.String(flags.NameRest), b, l, finished)
+	serverExecutor(socket.Serve, ctx.String(flags.NameSocket), b, l, finished)
 
 	<-finished
 
@@ -60,9 +60,10 @@ func createBackendConnection(ctx *cli.Context) physical.Backend {
 	return b
 }
 
-func serverExecutor(fn func(string, vault.SecurityBarrier) error, str string, b vault.SecurityBarrier, finisher chan struct{}) {
+func serverExecutor(fn func(string, physical.Backend, vault.SecurityBarrier) error, str string,
+	b physical.Backend, sb vault.SecurityBarrier, finisher chan struct{}) {
 	go func() {
-		if err := fn(str, b); err != nil {
+		if err := fn(str, b, sb); err != nil {
 			log.Error(err)
 		}
 		finisher <- struct{}{}

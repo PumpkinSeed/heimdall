@@ -13,7 +13,7 @@ import (
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/utils"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/aead"
-	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault"
 	log "github.com/sirupsen/logrus"
@@ -33,6 +33,7 @@ type Unseal struct {
 	threshold   int
 	TotalShares int
 	sb          vault.SecurityBarrier
+	b           physical.Backend
 }
 
 var (
@@ -52,8 +53,12 @@ func (u *Unseal) Init(t int) {
 	u.threshold = t
 }
 
-func (u *Unseal) SetBackend(b vault.SecurityBarrier) {
+func (u *Unseal) SetSecurityBarrier(b vault.SecurityBarrier) {
 	u.sb = b
+}
+
+func (u *Unseal) SetBackend(b physical.Backend) {
+	u.b = b
 }
 
 // First step to start the server
@@ -67,7 +72,7 @@ func (u *Unseal) Unseal(ctx context.Context, key string) (bool, error) {
 		u.tempKeys = append(u.tempKeys, rk)
 	}
 	if len(u.tempKeys) >= u.threshold {
-		return true, u.unseal(ctx, u.sb)
+		return true, u.unseal(ctx)
 	}
 
 	return false, nil
@@ -127,8 +132,8 @@ func (u *Unseal) Status() Status {
 	}
 }
 
-func (u *Unseal) unseal(ctx context.Context, b logical.Storage) error {
-	masterData, err := b.Get(ctx, BarrierKeysPath)
+func (u *Unseal) unseal(ctx context.Context) error {
+	masterData, err := u.b.Get(ctx, BarrierKeysPath)
 	if err != nil {
 		return err
 	}

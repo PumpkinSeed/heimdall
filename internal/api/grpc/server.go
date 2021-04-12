@@ -6,18 +6,19 @@ import (
 
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/transit"
 	"github.com/PumpkinSeed/heimdall/pkg/structs"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
 
-func Serve(addr string, b vault.SecurityBarrier) error {
+func Serve(addr string, b physical.Backend, sb vault.SecurityBarrier) error {
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
 	}
 	gsrv := grpc.NewServer()
-	structs.RegisterEncryptionServer(gsrv, newServer(b))
+	structs.RegisterEncryptionServer(gsrv, newServer(sb))
 	log.Infof("gRPC server listening on %s", addr)
 
 	return gsrv.Serve(lis)
