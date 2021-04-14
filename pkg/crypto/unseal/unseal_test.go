@@ -124,7 +124,7 @@ func TestUnseal_Mount(t *testing.T) {
 		sb:        &sb,
 	}
 
-	err := u.Mount(ctx)
+	_, err := u.Mount(ctx)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, u.MountID)
 	assert.Equal(t, "c79330b6-8890-533d-3d33-2806f6d2238a", u.MountID)

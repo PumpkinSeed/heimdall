@@ -13,6 +13,7 @@ import (
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/utils"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/aead"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault"
@@ -34,6 +35,7 @@ type Unseal struct {
 	TotalShares int
 	sb          vault.SecurityBarrier
 	b           physical.Backend
+	storage     logical.Storage // TODO consider to add default value to this, which checks unseal status and returns error if sealed
 }
 
 var (
@@ -94,28 +96,28 @@ func (u *Unseal) Keyring(ctx context.Context) error {
 }
 
 // Mount is mounting transit, getting the MountTable from database and decrypt it
-func (u *Unseal) Mount(ctx context.Context) error {
+func (u *Unseal) Mount(ctx context.Context) (string, error) {
 	if u.masterKey == nil {
-		return errors.New("server is still sealed, unseal it before do anything")
+		return "", errors.New("server is still sealed, unseal it before do anything")
 	}
 	if u.keyring == nil {
-		return errors.New("missing keyring, init keyring first")
+		return "", errors.New("missing keyring, init keyring first")
 	}
 
 	table, err := mount.Mount(ctx, u.b, u.keyring)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	for _, e := range table.Entries {
 		if strings.EqualFold(e.Type, "transit") {
 			u.MountID = e.UUID
 
-			break
+			return e.ViewPath(), nil
 		}
 	}
 
-	return nil
+	return "", errors.New("missing transit entry")
 }
 
 func (u *Unseal) Status() Status {
@@ -166,6 +168,10 @@ func (u *Unseal) unseal(ctx context.Context) error {
 
 	u.masterKey = keys[0]
 
+	return nil
+}
+
+func (u *Unseal) PostProcess(ctx context.Context, barrierPath string) error {
 	// TODO check seal key passing
 	if err := u.sb.Initialize(ctx, u.masterKey, []byte{}, rand.Reader); err != nil && !errors.Is(err, vault.ErrBarrierAlreadyInit) {
 		return err
@@ -175,6 +181,7 @@ func (u *Unseal) unseal(ctx context.Context) error {
 		return err
 	}
 
+	u.storage = vault.NewBarrierView(u.sb, barrierPath)
 	return nil
 }
 
@@ -185,4 +192,8 @@ func (u *Unseal) cleanTempKeys() {
 		}
 		u.tempKeys = [][]byte{}
 	}
+}
+
+func (u *Unseal) Storage() logical.Storage {
+	return u.storage
 }

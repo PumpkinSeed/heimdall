@@ -30,40 +30,56 @@ var Cmd = &cli.Command{
 func serve(ctx *cli.Context) error {
 	finished := make(chan struct{}, 1)
 
-	b := createBackendConnection(ctx)
-	l := createLogicalStorage(b)
+	if err := setupEnvironment(ctx); err != nil {
+		return err
+	}
 
-	serverExecutor(grpc.Serve, ctx.String(flags.NameGrpc), b, l, finished)
-	serverExecutor(rest.Serve, ctx.String(flags.NameRest), b, l, finished)
-	serverExecutor(socket.Serve, ctx.String(flags.NameSocket), b, l, finished)
+	serverExecutor(grpc.Serve, ctx.String(flags.NameGrpc), finished)
+	serverExecutor(rest.Serve, ctx.String(flags.NameRest), finished)
+	serverExecutor(socket.Serve, ctx.String(flags.NameSocket), finished)
 
 	<-finished
 
 	return nil
 }
 
-func createLogicalStorage(b physical.Backend) vault.SecurityBarrier {
+func setupEnvironment(ctx *cli.Context) error {
+	b, err := createBackendConnection(ctx)
+	if err != nil {
+		return err
+	}
+	sb, err := createLogicalStorage(b)
+	if err != nil {
+		return err
+	}
+	u := unseal.Get()
+	u.SetBackend(b)
+	u.SetSecurityBarrier(sb)
+
+	return nil
+}
+
+func createLogicalStorage(b physical.Backend) (vault.SecurityBarrier, error) {
 	l, err := vault.NewAESGCMBarrier(b)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return l
+	return l, nil
 }
 
-func createBackendConnection(ctx *cli.Context) physical.Backend {
+func createBackendConnection(ctx *cli.Context) (physical.Backend, error) {
 	b, err := storage.Create(ctx)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return b
+	return b, nil
 }
 
-func serverExecutor(fn func(string, physical.Backend, vault.SecurityBarrier) error, str string,
-	b physical.Backend, sb vault.SecurityBarrier, finisher chan struct{}) {
+func serverExecutor(fn func(string) error, str string, finisher chan struct{}) {
 	go func() {
-		if err := fn(str, b, sb); err != nil {
+		if err := fn(str); err != nil {
 			log.Error(err)
 		}
 		finisher <- struct{}{}

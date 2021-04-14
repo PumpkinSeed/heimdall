@@ -12,7 +12,7 @@ import (
 func (t Transit) CreateKey(ctx context.Context, name, keyType string) error {
 	polReq := keysutil.PolicyRequest{
 		Upsert:               true,
-		Storage:              t.storage,
+		Storage:              t.u.Storage(),
 		Name:                 name,
 		Derived:              false,
 		Convergent:           false,
@@ -38,7 +38,7 @@ func (t Transit) CreateKey(ctx context.Context, name, keyType string) error {
 
 func (t Transit) GetKey(ctx context.Context, name string) (*keysutil.Policy, error) {
 	p, _, err := t.lm.GetPolicy(ctx, keysutil.PolicyRequest{
-		Storage: t.storage,
+		Storage: t.u.Storage(),
 		Name:    name,
 	}, rand.Reader)
 	if err != nil {
@@ -54,11 +54,11 @@ func (t Transit) GetKey(ctx context.Context, name string) (*keysutil.Policy, err
 }
 
 func (t Transit) ListKeys(ctx context.Context) ([]string, error) {
-	return t.storage.List(ctx, "policy/")
+	return t.u.Storage().List(ctx, "policy/")
 }
 
 func (t Transit) DeleteKey(ctx context.Context, name string) error {
-	return t.lm.DeletePolicy(ctx, t.storage, name)
+	return t.lm.DeletePolicy(ctx, t.u.Storage(), name)
 }
 
 func getKeyType(typ string) keysutil.KeyType {

@@ -9,12 +9,10 @@ import (
 
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/utils"
-	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/hashicorp/vault/vault"
 	log "github.com/sirupsen/logrus"
 )
 
-func Serve(addr string, b physical.Backend, sb vault.SecurityBarrier) error {
+func Serve(addr string) error {
 	if err := os.RemoveAll(addr); err != nil {
 		return err
 	}
@@ -24,10 +22,6 @@ func Serve(addr string, b physical.Backend, sb vault.SecurityBarrier) error {
 		return err
 	}
 	log.Infof("Socket listening on %s", addr)
-
-	u := unseal.Get()
-	u.SetBackend(b)
-	u.SetSecurityBarrier(sb)
 
 	// TODO handle race here
 	sigc := make(chan os.Signal, 1)
@@ -46,7 +40,7 @@ func Serve(addr string, b physical.Backend, sb vault.SecurityBarrier) error {
 			return err
 		}
 
-		go serve(fd, u)
+		go serve(fd, unseal.Get())
 	}
 }
 
@@ -84,8 +78,16 @@ func serve(c net.Conn, u *unseal.Unseal) {
 			return
 		}
 
-		if err := u.Mount(ctx); err != nil {
+		barrierPath, err := u.Mount(ctx)
+		if err != nil {
 			log.Debug("Mount error")
+			writeError(c, u.Status(), err)
+
+			return
+		}
+
+		if err := u.PostProcess(ctx, barrierPath); err != nil {
+			log.Debug("Post process error")
 			writeError(c, u.Status(), err)
 
 			return

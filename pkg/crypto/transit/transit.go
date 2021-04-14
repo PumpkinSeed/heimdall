@@ -1,24 +1,24 @@
 package transit
 
 import (
+	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
-	"github.com/hashicorp/vault/vault"
 )
 
 type Transit struct {
-	lm      *keysutil.LockManager
-	storage vault.SecurityBarrier
+	lm *keysutil.LockManager
+	u  *unseal.Unseal
 }
 
-func New(db vault.SecurityBarrier) Transit {
+func New(u *unseal.Unseal) Transit {
 	lm, err := keysutil.NewLockManager(false, 0)
 	if err != nil {
 		panic(err)
 	}
 
 	return Transit{
-		lm:      lm,
-		storage: db,
+		lm: lm,
+		u:  u,
 	}
 }
 

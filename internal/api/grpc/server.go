@@ -5,20 +5,19 @@ import (
 	"net"
 
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/transit"
+	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	"github.com/PumpkinSeed/heimdall/pkg/structs"
-	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/hashicorp/vault/vault"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
 
-func Serve(addr string, b physical.Backend, sb vault.SecurityBarrier) error {
+func Serve(addr string) error {
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
 	}
 	gsrv := grpc.NewServer()
-	structs.RegisterEncryptionServer(gsrv, newServer(sb))
+	structs.RegisterEncryptionServer(gsrv, newServer(unseal.Get()))
 	log.Infof("gRPC server listening on %s", addr)
 
 	return gsrv.Serve(lis)
@@ -28,7 +27,7 @@ type server struct {
 	transit transit.Transit
 }
 
-func newServer(b vault.SecurityBarrier) server {
+func newServer(b *unseal.Unseal) server {
 	return server{
 		transit: transit.New(b),
 	}
