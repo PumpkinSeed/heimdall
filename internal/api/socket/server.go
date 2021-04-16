@@ -4,8 +4,6 @@ import (
 	"context"
 	"net"
 	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/utils"
@@ -23,16 +21,6 @@ func Serve(addr string) error {
 	}
 	log.Infof("Socket listening on %s", addr)
 
-	// TODO handle race here
-	sigc := make(chan os.Signal, 1)
-	signal.Notify(sigc, os.Interrupt, syscall.SIGTERM)
-	go func(ln net.Listener, c chan os.Signal) {
-		sig := <-c
-		log.Infof("Caught signal %s: shutting down.", sig)
-		ln.Close()
-		os.Exit(0)
-	}(ln, sigc)
-
 	for {
 		fd, err := ln.Accept()
 		if err != nil {
@@ -40,61 +28,56 @@ func Serve(addr string) error {
 			return err
 		}
 
-		go serve(fd, unseal.Get())
+		serve(fd, unseal.Get())
 	}
 }
 
 func serve(c net.Conn, u *unseal.Unseal) {
-	for {
-		if u.Status().Unsealed {
-			writeStr(c, u.Status().String())
+	if u.Status().Unsealed {
+		writeStr(c, u.Status().String())
 
-			return
-		}
-		data, err := bindInput(c)
-		if err != nil {
-			writeStr(c, "invalid input")
-
-			return
-		}
-		ctx := context.Background()
-		done, err := u.Unseal(ctx, string(data))
-		if err != nil {
-			writeError(c, u.Status(), err)
-
-			return
-		}
-		if !done {
-			log.Debug("Unseal not done yet")
-			writeStr(c, u.Status().String())
-
-			return
-		}
-
-		if err := u.Keyring(ctx); err != nil {
-			log.Debug("Keyring init error")
-			writeError(c, u.Status(), err)
-
-			return
-		}
-
-		barrierPath, err := u.Mount(ctx)
-		if err != nil {
-			log.Debug("Mount error")
-			writeError(c, u.Status(), err)
-
-			return
-		}
-
-		if err := u.PostProcess(ctx, barrierPath); err != nil {
-			log.Debug("Post process error")
-			writeError(c, u.Status(), err)
-
-			return
-		}
-
-		utils.Memzero(data)
+		return
 	}
+	data, err := bindInput(c)
+	if err != nil {
+		writeStr(c, "invalid input")
+
+		return
+	}
+	ctx := context.Background()
+	done, err := u.Unseal(ctx, string(data))
+	if err != nil {
+		writeError(c, u.Status(), err)
+
+		return
+	}
+	if !done {
+		log.Debug("Unseal not done yet")
+		writeStr(c, u.Status().String())
+
+		return
+	}
+	if err := u.Keyring(ctx); err != nil {
+		log.Debug("Keyring init error")
+		writeError(c, u.Status(), err)
+
+		return
+	}
+	barrierPath, err := u.Mount(ctx)
+	if err != nil {
+		log.Debug("Mount error")
+		writeError(c, u.Status(), err)
+
+		return
+	}
+	if err := u.PostProcess(ctx, barrierPath); err != nil {
+		log.Debug("Post process error")
+		writeError(c, u.Status(), err)
+
+		return
+	}
+	utils.Memzero(data)
+	writeStr(c, u.Status().String())
 }
 
 func bindInput(c net.Conn) ([]byte, error) {
