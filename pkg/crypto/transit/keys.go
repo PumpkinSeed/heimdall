@@ -5,11 +5,15 @@ import (
 	"crypto/rand"
 	"errors"
 
+	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/sirupsen/logrus"
 )
 
 func (t Transit) CreateKey(ctx context.Context, name, keyType string) error {
+	if !t.u.Status().Unsealed {
+		return unseal.ErrSealed
+	}
 	polReq := keysutil.PolicyRequest{
 		Upsert:               true,
 		Storage:              t.u.Storage(),
@@ -37,6 +41,9 @@ func (t Transit) CreateKey(ctx context.Context, name, keyType string) error {
 }
 
 func (t Transit) GetKey(ctx context.Context, name string) (*keysutil.Policy, error) {
+	if !t.u.Status().Unsealed {
+		return nil, unseal.ErrSealed
+	}
 	p, _, err := t.lm.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: t.u.Storage(),
 		Name:    name,
@@ -54,10 +61,16 @@ func (t Transit) GetKey(ctx context.Context, name string) (*keysutil.Policy, err
 }
 
 func (t Transit) ListKeys(ctx context.Context) ([]string, error) {
+	if !t.u.Status().Unsealed {
+		return nil, unseal.ErrSealed
+	}
 	return t.u.Storage().List(ctx, "policy/")
 }
 
 func (t Transit) DeleteKey(ctx context.Context, name string) error {
+	if !t.u.Status().Unsealed {
+		return unseal.ErrSealed
+	}
 	return t.lm.DeletePolicy(ctx, t.u.Storage(), name)
 }
 

@@ -40,6 +40,8 @@ type Unseal struct {
 
 var (
 	u *Unseal
+
+	ErrSealed = errors.New("operation not permitted, service is still sealed")
 )
 
 func Get() *Unseal {
