@@ -2,9 +2,9 @@ package transit
 
 import (
 	"context"
-	"crypto/rand"
 	"testing"
 
+	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault"
 	"github.com/stretchr/testify/assert"
@@ -23,16 +23,15 @@ func TestTransit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	u := &unseal.Unseal{}
+	u.SetSecurityBarrier(barrier)
+	u.SetMasterKey(masterKey)
 
-	if err := barrier.Initialize(ctx, masterKey, []byte{}, rand.Reader); err != nil {
+	if err := u.PostProcess(ctx, ""); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := barrier.Unseal(ctx, masterKey); err != nil {
-		t.Fatal(err)
-	}
-
-	tr := New(barrier)
+	tr := New(u)
 
 	const keyName = "testkey"
 	if err := tr.CreateKey(ctx, keyName, ""); err != nil {

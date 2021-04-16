@@ -198,3 +198,8 @@ func (u *Unseal) cleanTempKeys() {
 func (u *Unseal) Storage() logical.Storage {
 	return u.storage
 }
+
+// SetMasterKey is only for testing purpose
+func (u *Unseal) SetMasterKey(key []byte) {
+	u.masterKey = key
+}
