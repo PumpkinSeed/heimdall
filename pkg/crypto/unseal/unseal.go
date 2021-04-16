@@ -27,15 +27,15 @@ const (
 )
 
 type Unseal struct {
-	masterKey   []byte
-	keyring     *vault.Keyring
-	MountID     string
-	tempKeys    [][]byte
-	threshold   int
-	TotalShares int
-	sb          vault.SecurityBarrier
-	b           physical.Backend
-	storage     logical.Storage // TODO consider to add default value to this, which checks unseal status and returns error if sealed
+	masterKey       []byte
+	keyring         *vault.Keyring
+	MountID         string
+	tempKeys        [][]byte
+	threshold       int
+	TotalShares     int
+	securityBarrier vault.SecurityBarrier
+	backend         physical.Backend
+	storage         logical.Storage // TODO consider to add default value to this, which checks unseal status and returns error if sealed
 }
 
 var (
@@ -48,6 +48,7 @@ func Get() *Unseal {
 			TotalShares: defaultTotalShares,
 		}
 	}
+
 	return u
 }
 
@@ -56,11 +57,11 @@ func (u *Unseal) Init(t int) {
 }
 
 func (u *Unseal) SetSecurityBarrier(b vault.SecurityBarrier) {
-	u.sb = b
+	u.securityBarrier = b
 }
 
 func (u *Unseal) SetBackend(b physical.Backend) {
-	u.b = b
+	u.backend = b
 }
 
 // First step to start the server
@@ -85,7 +86,7 @@ func (u *Unseal) Keyring(ctx context.Context) error {
 	if u.masterKey == nil {
 		return errors.New("server is still sealed, unseal it before do anything")
 	}
-	k, err := keyring.Init(ctx, u.b, u.masterKey)
+	k, err := keyring.Init(ctx, u.backend, u.masterKey)
 	if err != nil {
 		return err
 	}
@@ -104,7 +105,7 @@ func (u *Unseal) Mount(ctx context.Context) (string, error) {
 		return "", errors.New("missing keyring, init keyring first")
 	}
 
-	table, err := mount.Mount(ctx, u.b, u.keyring)
+	table, err := mount.Mount(ctx, u.backend, u.keyring)
 	if err != nil {
 		return "", err
 	}
@@ -121,7 +122,7 @@ func (u *Unseal) Mount(ctx context.Context) (string, error) {
 }
 
 func (u *Unseal) Status() Status {
-	sealed, err := u.sb.Sealed()
+	sealed, err := u.securityBarrier.Sealed()
 	if err != nil {
 		log.Error(err)
 	}
@@ -135,7 +136,7 @@ func (u *Unseal) Status() Status {
 }
 
 func (u *Unseal) unseal(ctx context.Context) error {
-	masterData, err := u.b.Get(ctx, BarrierKeysPath)
+	masterData, err := u.backend.Get(ctx, BarrierKeysPath)
 	if err != nil {
 		return err
 	}
@@ -173,15 +174,15 @@ func (u *Unseal) unseal(ctx context.Context) error {
 
 func (u *Unseal) PostProcess(ctx context.Context, barrierPath string) error {
 	// TODO check seal key passing
-	if err := u.sb.Initialize(ctx, u.masterKey, []byte{}, rand.Reader); err != nil && !errors.Is(err, vault.ErrBarrierAlreadyInit) {
+	if err := u.securityBarrier.Initialize(ctx, u.masterKey, []byte{}, rand.Reader); err != nil && !errors.Is(err, vault.ErrBarrierAlreadyInit) {
 		return err
 	}
 
-	if err := u.sb.Unseal(ctx, u.masterKey); err != nil {
+	if err := u.securityBarrier.Unseal(ctx, u.masterKey); err != nil {
 		return err
 	}
 
-	u.storage = vault.NewBarrierView(u.sb, barrierPath)
+	u.storage = vault.NewBarrierView(u.securityBarrier, barrierPath)
 	return nil
 }
 

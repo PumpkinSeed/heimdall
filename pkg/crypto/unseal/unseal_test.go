@@ -28,11 +28,11 @@ func TestUnseal_Unseal(t *testing.T) {
 		ValueHash: nil,
 	}, nil)
 
-	sb := mockSecurityBarrier{
-		backend: &m,
-	}
+	//sb := mockSecurityBarrier{
+	//	backend: &m,
+	//}
 
-	u := Unseal{threshold: 3, sb: &sb}
+	u := Unseal{threshold: 3, backend: &m}
 
 	var ok bool
 	for _, key := range [][]byte{
@@ -67,13 +67,9 @@ func TestUnseal_Keyring(t *testing.T) {
 			11, 42, 188, 183, 209, 39, 48, 108, 180, 93, 84, 225, 103, 43, 176, 156, 244},
 	}, nil)
 
-	sb := mockSecurityBarrier{
-		backend: &m,
-	}
-
 	u := Unseal{threshold: 3,
 		masterKey: expectedMasterKey,
-		sb:        &sb,
+		backend:   &m,
 	}
 
 	err := u.Keyring(ctx)
@@ -113,15 +109,11 @@ func TestUnseal_Mount(t *testing.T) {
 		},
 	}, nil)
 
-	sb := mockSecurityBarrier{
-		backend: &m,
-	}
-
 	u := Unseal{
 		masterKey: expectedMasterKey,
 		keyring:   givenKeyring(),
 		threshold: 3,
-		sb:        &sb,
+		backend:   &m,
 	}
 
 	_, err := u.Mount(ctx)
