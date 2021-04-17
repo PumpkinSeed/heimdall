@@ -3,7 +3,6 @@ package unseal
 import (
 	"io"
 	"net"
-	"sync"
 
 	"github.com/PumpkinSeed/heimdall/cmd/server/flags"
 	log "github.com/sirupsen/logrus"
@@ -13,6 +12,9 @@ import (
 var Cmd = &cli.Command{
 	Name:   "unseal",
 	Action: action,
+	Flags: []cli.Flag{
+		flags.Socket,
+	},
 }
 
 func action(ctx *cli.Context) error {
@@ -29,21 +31,15 @@ func action(ctx *cli.Context) error {
 		return err
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go readResult(c, &wg)
-	wg.Wait()
-
-	return nil
+	return readResult(c)
 }
 
-func readResult(r io.Reader, wg *sync.WaitGroup) {
-	defer wg.Done()
+func readResult(r io.Reader) error {
 	buf := make([]byte, 1024)
 	n, err := r.Read(buf)
 	if err != nil {
-		log.Fatalf("Result read error: %v", err)
-		return
+		return err
 	}
 	log.Infof("Client got: %s", string(buf[0:n]))
+	return nil
 }

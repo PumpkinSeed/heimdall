@@ -8,6 +8,7 @@ import (
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	"github.com/PumpkinSeed/heimdall/pkg/storage"
 	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/vault"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -29,29 +30,56 @@ var Cmd = &cli.Command{
 func serve(ctx *cli.Context) error {
 	finished := make(chan struct{}, 1)
 
-	b := createBackendConnection(ctx)
+	if err := setupEnvironment(ctx); err != nil {
+		return err
+	}
 
-	serverExecutor(grpc.Serve, ctx.String(flags.NameGrpc), b, finished)
-	serverExecutor(rest.Serve, ctx.String(flags.NameRest), b, finished)
-	serverExecutor(socket.Serve, ctx.String(flags.NameSocket), b, finished)
+	serverExecutor(grpc.Serve, ctx.String(flags.NameGrpc), finished)
+	serverExecutor(rest.Serve, ctx.String(flags.NameRest), finished)
+	serverExecutor(socket.Serve, ctx.String(flags.NameSocket), finished)
 
 	<-finished
 
 	return nil
 }
 
-func createBackendConnection(ctx *cli.Context) physical.Backend {
-	b, err := storage.Create(ctx)
+func setupEnvironment(ctx *cli.Context) error {
+	b, err := createBackendConnection(ctx)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
+	sb, err := createLogicalStorage(b)
+	if err != nil {
+		return err
+	}
+	u := unseal.Get()
+	u.SetBackend(b)
+	u.SetSecurityBarrier(sb)
 
-	return b
+	return nil
 }
 
-func serverExecutor(fn func(string, physical.Backend) error, str string, b physical.Backend, finisher chan struct{}) {
+func createLogicalStorage(b physical.Backend) (vault.SecurityBarrier, error) {
+	l, err := vault.NewAESGCMBarrier(b)
+	if err != nil {
+		return nil, err
+	}
+
+	return l, nil
+}
+
+func createBackendConnection(ctx *cli.Context) (physical.Backend, error) {
+	b, err := storage.Create(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return b, nil
+}
+
+func serverExecutor(fn func(string) error, str string, finisher chan struct{}) {
 	go func() {
-		if err := fn(str, b); err != nil {
+		if err := fn(str); err != nil {
 			log.Error(err)
 		}
 		finisher <- struct{}{}

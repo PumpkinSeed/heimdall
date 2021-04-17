@@ -9,39 +9,15 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
 var expectedMasterKey = []byte{189, 121, 77, 142, 213, 195, 183, 143, 119, 147, 168, 188, 242, 216, 180,
 	245, 110, 118, 183, 203, 72, 121, 94, 174, 222, 164, 209, 240, 156, 246, 22, 109}
 
-type mockBackend struct {
-	mock.Mock
-}
-
-func (m mockBackend) Put(ctx context.Context, entry *physical.Entry) error {
-	panic("implement me")
-}
-
-func (m mockBackend) Get(ctx context.Context, key string) (*physical.Entry, error) {
-	args := m.Called(ctx, key)
-	return args.Get(0).(*physical.Entry), args.Error(1)
-}
-
-func (m mockBackend) Delete(ctx context.Context, key string) error {
-	panic("implement me")
-}
-
-func (m mockBackend) List(ctx context.Context, prefix string) ([]string, error) {
-	panic("implement me")
-}
-
 func TestUnseal_Unseal(t *testing.T) {
-	u := Unseal{threshold: 3}
-
 	ctx := context.Background()
 
-	m := &mockBackend{}
+	m := mockBackend{}
 	m.On("Get", ctx, BarrierKeysPath).Return(&physical.Entry{
 		Key: BarrierKeysPath,
 		Value: []byte{10, 76, 108, 24, 51, 243, 113, 43, 241, 157, 113, 182, 209, 44, 148, 160,
@@ -52,6 +28,12 @@ func TestUnseal_Unseal(t *testing.T) {
 		ValueHash: nil,
 	}, nil)
 
+	//sb := mockSecurityBarrier{
+	//	backend: &m,
+	//}
+
+	u := Unseal{threshold: 3, backend: &m}
+
 	var ok bool
 	for _, key := range [][]byte{
 		[]byte("v0cY5GRpYaEmthQslOCaoT9x6WCy0SaVZ0+9di26zQ3z"),
@@ -59,7 +41,7 @@ func TestUnseal_Unseal(t *testing.T) {
 		[]byte("Lm78dm+K585VkFuFBRyOWPQBNV/9QE7X7fV9Uot0Hc0z")} {
 
 		var err error
-		ok, err = u.Unseal(ctx, m, string(key))
+		ok, err = u.Unseal(ctx, string(key))
 		assert.Nil(t, err)
 	}
 	assert.True(t, ok)
@@ -68,11 +50,9 @@ func TestUnseal_Unseal(t *testing.T) {
 }
 
 func TestUnseal_Keyring(t *testing.T) {
-	u := Unseal{masterKey: expectedMasterKey, threshold: 3}
-
 	ctx := context.Background()
 
-	m := &mockBackend{}
+	m := mockBackend{}
 	m.On("Get", ctx, keyring.Path).Return(&physical.Entry{
 		Key: keyring.Path,
 		Value: []byte{0, 0, 0, 1, 2, 48, 130, 173, 191, 53, 17, 230, 160, 131, 197, 61, 98, 152, 231, 57, 161,
@@ -87,7 +67,12 @@ func TestUnseal_Keyring(t *testing.T) {
 			11, 42, 188, 183, 209, 39, 48, 108, 180, 93, 84, 225, 103, 43, 176, 156, 244},
 	}, nil)
 
-	err := u.Keyring(ctx, m)
+	u := Unseal{threshold: 3,
+		masterKey: expectedMasterKey,
+		backend:   &m,
+	}
+
+	err := u.Keyring(ctx)
 	assert.Nil(t, err)
 	assert.NotNil(t, u.keyring)
 	assert.Equal(t, expectedMasterKey, u.keyring.MasterKey())
@@ -95,12 +80,6 @@ func TestUnseal_Keyring(t *testing.T) {
 }
 
 func TestUnseal_Mount(t *testing.T) {
-	u := Unseal{
-		masterKey: expectedMasterKey,
-		keyring:   givenKeyring(),
-		threshold: 3,
-	}
-
 	ctx := context.Background()
 	m := mockBackend{}
 	m.On("Get", ctx, mount.CorePath).Return(&physical.Entry{
@@ -130,7 +109,14 @@ func TestUnseal_Mount(t *testing.T) {
 		},
 	}, nil)
 
-	err := u.Mount(ctx, m)
+	u := Unseal{
+		masterKey: expectedMasterKey,
+		keyring:   givenKeyring(),
+		threshold: 3,
+		backend:   &m,
+	}
+
+	_, err := u.Mount(ctx)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, u.MountID)
 	assert.Equal(t, "c79330b6-8890-533d-3d33-2806f6d2238a", u.MountID)
