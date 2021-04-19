@@ -137,6 +137,15 @@ func (u *Unseal) Status() Status {
 	}
 }
 
+func (u *Unseal) DevMode(ctx context.Context) {
+	var masterKey = []byte{189, 121, 77, 142, 213, 195, 183, 143, 119, 147, 168, 188, 242, 216, 180,
+		245, 110, 118, 183, 203, 72, 121, 94, 174, 222, 164, 209, 240, 156, 246, 22, 109}
+	u.SetMasterKey(masterKey)
+	if err := u.PostProcess(ctx, ""); err != nil {
+		log.Error(err)
+	}
+}
+
 func (u *Unseal) unseal(ctx context.Context) error {
 	masterData, err := u.backend.Get(ctx, BarrierKeysPath)
 	if err != nil {

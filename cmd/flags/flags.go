@@ -10,6 +10,7 @@ const (
 	NameThreshold     = "threshold"
 	NameConsulAddress = "consul-address"
 	NameConsulToken   = "consul-token"
+	NameInMemory      = "in-memory"
 
 	grpcDefaultAddr   = "0.0.0.0:9090"
 	restDefaultAddr   = "0.0.0.0:8080"
@@ -52,5 +53,10 @@ var (
 	ConsulToken = &cli.StringFlag{
 		Name:  NameConsulToken,
 		Usage: "Add consul's access token here",
+	}
+	InMem = &cli.BoolFlag{
+		Name:  NameInMemory,
+		Usage: "Starts the server with in memory physical backend for development",
+		Value: false,
 	}
 )

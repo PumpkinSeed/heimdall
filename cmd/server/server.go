@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"github.com/PumpkinSeed/heimdall/cmd/flags"
 	"github.com/PumpkinSeed/heimdall/internal/api/grpc"
 	"github.com/PumpkinSeed/heimdall/internal/api/rest"
@@ -24,6 +25,7 @@ var Cmd = &cli.Command{
 		flags.Threshold,
 		flags.ConsulAddress,
 		flags.ConsulToken,
+		flags.InMem,
 	},
 }
 
@@ -55,7 +57,9 @@ func setupEnvironment(ctx *cli.Context) error {
 	u := unseal.Get()
 	u.SetBackend(b)
 	u.SetSecurityBarrier(sb)
-
+	if ctx.Bool(flags.NameInMemory) {
+		u.DevMode(context.Background())
+	}
 	return nil
 }
 
