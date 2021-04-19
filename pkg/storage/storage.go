@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"github.com/PumpkinSeed/heimdall/cmd/server/flags"
+	"github.com/PumpkinSeed/heimdall/cmd/flags"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/physical/consul"
 	"github.com/hashicorp/vault/sdk/helper/logging"
