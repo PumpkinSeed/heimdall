@@ -1,7 +1,7 @@
 package server
 
 import (
-	"github.com/PumpkinSeed/heimdall/cmd/server/flags"
+	"github.com/PumpkinSeed/heimdall/cmd/flags"
 	"github.com/PumpkinSeed/heimdall/internal/api/grpc"
 	"github.com/PumpkinSeed/heimdall/internal/api/rest"
 	"github.com/PumpkinSeed/heimdall/internal/api/socket"

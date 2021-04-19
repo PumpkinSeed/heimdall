@@ -3,6 +3,7 @@ package flags
 import "github.com/urfave/cli/v2"
 
 const (
+	NameVerbose       = "verbose"
 	NameGrpc          = "grpc"
 	NameRest          = "rest"
 	NameSocket        = "socket"
@@ -17,6 +18,10 @@ const (
 )
 
 var (
+	Verbose = &cli.BoolFlag{
+		Name: NameVerbose,
+	}
+
 	Grpc = &cli.StringFlag{
 		Name:  NameGrpc,
 		Usage: "Starts grpc server and listen on specified address",

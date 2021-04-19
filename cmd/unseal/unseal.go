@@ -4,7 +4,7 @@ import (
 	"io"
 	"net"
 
-	"github.com/PumpkinSeed/heimdall/cmd/server/flags"
+	"github.com/PumpkinSeed/heimdall/cmd/flags"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
