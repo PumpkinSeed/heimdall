@@ -54,7 +54,7 @@ var (
 		Name:  NameConsulToken,
 		Usage: "Add consul's access token here",
 	}
-	InMem = &cli.BoolFlag{
+	InMemory = &cli.BoolFlag{
 		Name:  NameInMemory,
 		Usage: "Starts the server with in memory physical backend for development",
 		Value: false,

@@ -137,16 +137,14 @@ func (u *Unseal) Status() Status {
 	}
 }
 
-func (u *Unseal) DevMode(ctx context.Context) {
+func (u *Unseal) DevMode(ctx context.Context) error {
 	masterKey := make([]byte, 32)
 	_, err := rand.Read(masterKey)
 	if err != nil {
-		log.Error(err)
+		return err
 	}
 	u.SetMasterKey(masterKey)
-	if err := u.PostProcess(ctx, ""); err != nil {
-		log.Error(err)
-	}
+	return u.PostProcess(ctx, "")
 }
 
 func (u *Unseal) unseal(ctx context.Context) error {

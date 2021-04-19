@@ -25,7 +25,7 @@ var Cmd = &cli.Command{
 		flags.Threshold,
 		flags.ConsulAddress,
 		flags.ConsulToken,
-		flags.InMem,
+		flags.InMemory,
 	},
 }
 
@@ -58,7 +58,7 @@ func setupEnvironment(ctx *cli.Context) error {
 	u.SetBackend(b)
 	u.SetSecurityBarrier(sb)
 	if ctx.Bool(flags.NameInMemory) {
-		u.DevMode(context.Background())
+		return u.DevMode(context.Background())
 	}
 	return nil
 }
