@@ -2,13 +2,25 @@ package socket
 
 import (
 	"context"
+	"encoding/json"
 	"net"
 	"os"
 
+	"github.com/PumpkinSeed/heimdall/internal/api/socket/services"
+	"github.com/PumpkinSeed/heimdall/internal/structs"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
-	"github.com/PumpkinSeed/heimdall/pkg/crypto/utils"
 	log "github.com/sirupsen/logrus"
 )
+
+var servers = map[structs.SocketType]Server{}
+
+type Server interface {
+	Handler(ctx context.Context, req structs.SocketRequest) (structs.SocketResponse, error)
+}
+
+func initServers(u *unseal.Unseal) {
+	servers[structs.SocketUnseal] = services.NewUnseal(u)
+}
 
 func Serve(addr string) error {
 	if err := os.RemoveAll(addr); err != nil {
@@ -21,78 +33,61 @@ func Serve(addr string) error {
 	}
 	log.Infof("Socket listening on %s", addr)
 
+	initServers(unseal.Get())
+
 	for {
 		fd, err := ln.Accept()
 		if err != nil {
 			log.Error("Accept error: ", err)
+
 			return err
 		}
 
-		serve(fd, unseal.Get())
+		serve(fd)
 	}
 }
 
-func serve(c net.Conn, u *unseal.Unseal) {
-	if u.Status().Unsealed {
-		writeStr(c, u.Status().String())
-
-		return
-	}
-	data, err := bindInput(c)
+func serve(c net.Conn) {
+	req, err := bindInput(c)
 	if err != nil {
-		writeStr(c, "invalid input")
+		log.Errorf("error at input binding: %v", err)
+		writeError(c, err)
 
 		return
 	}
-	ctx := context.Background()
-	done, err := u.Unseal(ctx, string(data))
+
+	res, err := servers[req.Type].Handler(context.Background(), req)
 	if err != nil {
-		writeError(c, u.Status(), err)
+		log.Errorf("error request handling: %v", err)
+		writeError(c, err)
+		write(c, res.Data)
 
 		return
 	}
-	if !done {
-		log.Debug("Unseal not done yet")
-		writeStr(c, u.Status().String())
 
-		return
-	}
-	if err := u.Keyring(ctx); err != nil {
-		log.Debug("Keyring init error")
-		writeError(c, u.Status(), err)
-
-		return
-	}
-	barrierPath, err := u.Mount(ctx)
-	if err != nil {
-		log.Debug("Mount error")
-		writeError(c, u.Status(), err)
-
-		return
-	}
-	if err := u.PostProcess(ctx, barrierPath); err != nil {
-		log.Debug("Post process error")
-		writeError(c, u.Status(), err)
-
-		return
-	}
-	utils.Memzero(data)
-	writeStr(c, u.Status().String())
+	write(c, res.Data)
 }
 
-func bindInput(c net.Conn) ([]byte, error) {
-	buf := make([]byte, 44)
+func bindInput(c net.Conn) (structs.SocketRequest, error) {
+	buf := make([]byte, 512)
 	nr, err := c.Read(buf)
 	if err != nil {
-		return nil, err
+		return structs.SocketRequest{}, err
 	}
 
-	return buf[0:nr], nil
+	var req structs.SocketRequest
+	if err := json.Unmarshal(buf[0:nr], &req); err != nil {
+		return structs.SocketRequest{}, err
+	}
+	if req.Type == structs.SocketUnknown {
+		return structs.SocketRequest{}, structs.ErrUnknownRequest
+	}
+
+	return req, nil
 }
 
-func writeError(c net.Conn, s unseal.Status, err error) {
-	writeStr(c, "Error:\n")
-	writeStr(c, s.String())
+func writeError(c net.Conn, err error) {
+	writeStr(c, "\nError:\n")
 	writeStr(c, err.Error())
 }
 
