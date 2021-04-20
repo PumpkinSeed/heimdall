@@ -1,0 +1,4 @@
+[submodule "vendor"]
+	path = vendor
+	url = git@github.com:PumpkinSeed/heimdall-vendor.git
+	branch = migrate-1
