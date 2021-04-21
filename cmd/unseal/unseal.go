@@ -5,6 +5,7 @@ import (
 	"net"
 
 	"github.com/PumpkinSeed/heimdall/cmd/flags"
+	"github.com/PumpkinSeed/heimdall/internal/structs"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -27,7 +28,10 @@ func action(ctx *cli.Context) error {
 	key := ctx.Args().First()
 	log.Debugf("sending key: %s", key)
 
-	if _, err := c.Write([]byte(key)); err != nil {
+	if _, err := c.Write(structs.SocketRequest{
+		Type: structs.SocketUnseal,
+		Data: []byte(key),
+	}.MustMarshal()); err != nil {
 		return err
 	}
 
@@ -41,5 +45,6 @@ func readResult(r io.Reader) error {
 		return err
 	}
 	log.Infof("Client got: %s", string(buf[0:n]))
+
 	return nil
 }
