@@ -10,7 +10,7 @@ import (
 )
 
 func TestClient(t *testing.T) {
-	t.Skip("Skip integration test")
+	//t.Skip("Skip integration test")
 	client, err := Client("127.0.0.1:9090", Options{})
 	if err != nil {
 		t.Fatal(err)

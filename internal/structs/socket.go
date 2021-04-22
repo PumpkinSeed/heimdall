@@ -8,6 +8,7 @@ import (
 const (
 	SocketUnknown = iota
 	SocketUnseal
+	SocketInit
 )
 
 type SocketType int

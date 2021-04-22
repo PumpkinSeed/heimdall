@@ -1,6 +1,7 @@
 package main
 
 import (
+	initcommand "github.com/PumpkinSeed/heimdall/cmd/init"
 	"os"
 
 	"github.com/PumpkinSeed/heimdall/cmd/flags"
@@ -14,6 +15,7 @@ var app = cli.App{
 	Commands: []*cli.Command{
 		server.Cmd,
 		unseal.Cmd,
+		initcommand.Cmd,
 	},
 	Flags: []cli.Flag{
 		flags.Verbose,
