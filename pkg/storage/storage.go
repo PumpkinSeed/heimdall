@@ -2,9 +2,8 @@ package storage
 
 import (
 	"github.com/PumpkinSeed/heimdall/cmd/flags"
-	"github.com/hashicorp/go-hclog"
+	"github.com/PumpkinSeed/heimdall/internal/logger"
 	"github.com/hashicorp/vault/physical/consul"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	log "github.com/sirupsen/logrus"
@@ -15,10 +14,10 @@ import (
 func Create(ctx *cli.Context) (physical.Backend, error) {
 	if ctx.Bool(flags.NameInMemory) {
 		log.Info("starting the server with in memory storage")
-		return inmem.NewInmem(nil, logging.NewVaultLogger(hclog.Debug))
+		return inmem.NewInmem(nil, logger.Of(log.StandardLogger()))
 	}
 	return consul.NewConsulBackend(map[string]string{
 		"address": ctx.String(flags.NameConsulAddress),
 		"token":   ctx.String(flags.NameConsulToken),
-	}, logging.NewVaultLogger(hclog.Debug))
+	}, logger.Of(log.StandardLogger()))
 }
