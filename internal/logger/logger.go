@@ -25,63 +25,63 @@ func Of(l *logrus.Logger) *Logger {
 	}
 }
 
-func (l *Logger) Log(level hclog.Level, msg string, args ...interface{}) {
+func (l Logger) Log(level hclog.Level, msg string, args ...interface{}) {
 	l.withArgs(args).Logf(getLevel(level), msg)
 }
 
-func (l *Logger) Trace(msg string, args ...interface{}) {
+func (l Logger) Trace(msg string, args ...interface{}) {
 	l.withArgs(args).Entry.Trace(msg)
 }
 
-func (l *Logger) Debug(msg string, args ...interface{}) {
+func (l Logger) Debug(msg string, args ...interface{}) {
 	l.withArgs(args).Entry.Debug(msg)
 }
 
-func (l *Logger) Info(msg string, args ...interface{}) {
+func (l Logger) Info(msg string, args ...interface{}) {
 	l.withArgs(args).Entry.Info(msg)
 }
 
-func (l *Logger) Warn(msg string, args ...interface{}) {
+func (l Logger) Warn(msg string, args ...interface{}) {
 	l.withArgs(args).Entry.Warn(msg)
 }
 
-func (l *Logger) Error(msg string, args ...interface{}) {
+func (l Logger) Error(msg string, args ...interface{}) {
 	l.withArgs(args).Entry.Error(msg)
 }
 
-func (l *Logger) IsTrace() bool {
+func (l Logger) IsTrace() bool {
 	return l.Logger.IsLevelEnabled(logrus.TraceLevel)
 }
 
-func (l *Logger) IsDebug() bool {
+func (l Logger) IsDebug() bool {
 	return l.Logger.IsLevelEnabled(logrus.DebugLevel)
 }
 
-func (l *Logger) IsInfo() bool {
+func (l Logger) IsInfo() bool {
 	return l.Logger.IsLevelEnabled(logrus.InfoLevel)
 }
 
-func (l *Logger) IsWarn() bool {
+func (l Logger) IsWarn() bool {
 	return l.Logger.IsLevelEnabled(logrus.WarnLevel)
 }
 
-func (l *Logger) IsError() bool {
+func (l Logger) IsError() bool {
 	return l.Logger.IsLevelEnabled(logrus.ErrorLevel)
 }
 
-func (l *Logger) ImpliedArgs() []interface{} {
+func (l Logger) ImpliedArgs() []interface{} {
 	return nil
 }
 
-func (l *Logger) With(args ...interface{}) hclog.Logger {
+func (l Logger) With(args ...interface{}) hclog.Logger {
 	return l.withArgs(args)
 }
 
-func (l *Logger) Name() string {
+func (l Logger) Name() string {
 	return l.name
 }
 
-func (l *Logger) Named(name string) hclog.Logger {
+func (l Logger) Named(name string) hclog.Logger {
 	res := l.withArgs("name", name)
 	if res.name != "" {
 		res.name = res.name + "." + name
@@ -104,7 +104,7 @@ func (l *Logger) SetLevel(level hclog.Level) {
 	l.Logger.SetLevel(getLevel(level))
 }
 
-func (l *Logger) StandardLogger(opts *hclog.StandardLoggerOptions) *log.Logger {
+func (l Logger) StandardLogger(opts *hclog.StandardLoggerOptions) *log.Logger {
 	if opts == nil {
 		opts = &hclog.StandardLoggerOptions{}
 	}
@@ -112,11 +112,11 @@ func (l *Logger) StandardLogger(opts *hclog.StandardLoggerOptions) *log.Logger {
 	return log.New(l.StandardWriter(opts), "", 0)
 }
 
-func (l *Logger) StandardWriter(opts *hclog.StandardLoggerOptions) io.Writer {
+func (l Logger) StandardWriter(opts *hclog.StandardLoggerOptions) io.Writer {
 	return l.Logger.Out
 }
 
-func (l *Logger) withArgs(args ...interface{}) *Logger {
+func (l Logger) withArgs(args ...interface{}) *Logger {
 	if args == nil || len(args) == 1 || len(args)%2 != 0 {
 		return &Logger{l.Entry, l.name}
 	}
