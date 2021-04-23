@@ -128,6 +128,14 @@ func (s server) Decrypt(ctx context.Context, req *structs.DecryptRequest) (*stru
 	}, err
 }
 
+func (s server) Hash(ctx context.Context, req *structs.HashRequest) (*structs.HashResponse, error) {
+	panic("implement me")
+}
+
+func (s server) GenerateHMAC(ctx context.Context, req *structs.HMACRequest) (*structs.HMACResponse, error) {
+	panic("implement me")
+}
+
 func getStatus(err error) structs.Status {
 	if err != nil {
 		return structs.Status_ERROR
