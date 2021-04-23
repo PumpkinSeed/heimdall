@@ -3,10 +3,9 @@ package flags
 import "github.com/urfave/cli/v2"
 
 const (
-	NameVerbose          = "verbose"
-	NameLogOutput        = "log-output"
-	NameLogOutputNetwork = "log-output-net"
-	NameLogOutputAddress = "log-output-addr"
+	NameVerbose       = "verbose"
+	NameLogOutput     = "log-output"
+	NameLogAdditional = "log-additional"
 
 	NameGrpc          = "grpc"
 	NameRest          = "rest"
@@ -32,13 +31,8 @@ var (
 		Value: "sout",
 	}
 	LogOutputNetwork = &cli.StringFlag{
-		Name:  NameLogOutputNetwork,
-		Usage: "The network kind of the log output network protocol (tcp or udp)",
-		Value: "udp",
-	}
-	LogOutputAddress = &cli.StringFlag{
-		Name:  NameLogOutputAddress,
-		Usage: "The network address of the syslog output",
+		Name:  NameLogAdditional,
+		Usage: "Additional data for logger\nSyslog example: \"network=tcp;address=localhost:6060\"",
 	}
 
 	Grpc = &cli.StringFlag{
