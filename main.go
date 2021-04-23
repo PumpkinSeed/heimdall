@@ -19,8 +19,7 @@ var app = cli.App{
 	Flags: []cli.Flag{
 		flags.Verbose,
 		flags.LogOutput,
-		flags.LogOutputNetwork,
-		flags.LogOutputAddress,
+		flags.LogAdditional,
 	},
 	Before: common.Before,
 }

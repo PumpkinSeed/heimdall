@@ -30,7 +30,7 @@ var (
 		Usage: "Set the log output",
 		Value: "sout",
 	}
-	LogOutputNetwork = &cli.StringFlag{
+	LogAdditional = &cli.StringFlag{
 		Name:  NameLogAdditional,
 		Usage: "Additional data for logger\nSyslog example: \"network=tcp;address=localhost:6060\"",
 	}
