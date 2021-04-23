@@ -129,7 +129,14 @@ func (s server) Decrypt(ctx context.Context, req *structs.DecryptRequest) (*stru
 }
 
 func (s server) Hash(ctx context.Context, req *structs.HashRequest) (*structs.HashResponse, error) {
-	panic("implement me")
+	hash, err := s.transit.Hash(ctx, req.Input, req.Algorithm, req.Format)
+	if err != nil {
+		log.Errorf("Error hashing: %v", err)
+	}
+
+	return &structs.HashResponse{
+		Result: hash,
+	}, err
 }
 
 func (s server) GenerateHMAC(ctx context.Context, req *structs.HMACRequest) (*structs.HMACResponse, error) {
