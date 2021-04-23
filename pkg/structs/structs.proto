@@ -80,7 +80,7 @@ message HashResponse {
 
 message HMACRequest {
     string keyName = 1;
-    string keyVersion = 2;
+    int64 keyVersion = 2;
     string algorithm = 3;
     string input = 4;
 }
