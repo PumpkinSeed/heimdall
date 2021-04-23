@@ -140,7 +140,14 @@ func (s server) Hash(ctx context.Context, req *structs.HashRequest) (*structs.Ha
 }
 
 func (s server) GenerateHMAC(ctx context.Context, req *structs.HMACRequest) (*structs.HMACResponse, error) {
-	panic("implement me")
+	hmac, err := s.transit.HMAC(ctx, req.KeyName, req.Input, req.Algorithm, int(req.KeyVersion))
+	if err != nil {
+		log.Errorf("Error HMAC generating: %v", err)
+	}
+
+	return &structs.HMACResponse{
+		Result: hmac,
+	}, err
 }
 
 func getStatus(err error) structs.Status {
