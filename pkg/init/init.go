@@ -81,7 +81,15 @@ type Init struct {
 	saltLock sync.RWMutex
 	tokenLocks []*locksutil.LockEntry
 
+	// mounts is loaded after unseal since it is a protected
+	// configuration
+	mounts *vault.MountTable
+
 	//expirationManager *vault.ExpirationManager
+}
+
+func (init *Init) SetMountTables(mounts *vault.MountTable) {
+	init.mounts = mounts
 }
 
 func (init *Init) Initialize(req Request) (Result, error) {
@@ -138,6 +146,13 @@ func (init *Init) Initialize(req Request) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
+
+	// TODO mount tables
+
+	if err := PersistMounts(ctx,init.mounts); err != nil {
+		return Result{}, err
+	}
+
 	return Result{
 		SecretShares: sealKeyShares,
 		RootToken: rootToken.ID,

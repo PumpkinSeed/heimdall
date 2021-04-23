@@ -215,3 +215,7 @@ func (u *Unseal) Storage() logical.Storage {
 func (u *Unseal) SetMasterKey(key []byte) {
 	u.masterKey = key
 }
+
+func (u *Unseal) GetKeyRing() *vault.Keyring {
+	return u.keyring
+}

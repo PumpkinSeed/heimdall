@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
-
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/keyring"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/utils"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -13,7 +12,10 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-const CorePath = "core/mounts"
+const (
+	CorePath = "core/mounts"
+)
+
 
 func Mount(ctx context.Context, b physical.Backend, kr *vault.Keyring) (*vault.MountTable, error) {
 	mountsData, err := b.Get(ctx, CorePath)
