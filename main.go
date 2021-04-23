@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 
+	"github.com/PumpkinSeed/heimdall/cmd/common"
 	"github.com/PumpkinSeed/heimdall/cmd/flags"
 	"github.com/PumpkinSeed/heimdall/cmd/server"
 	"github.com/PumpkinSeed/heimdall/cmd/unseal"
@@ -17,13 +18,10 @@ var app = cli.App{
 	},
 	Flags: []cli.Flag{
 		flags.Verbose,
+		flags.LogOutput,
+		flags.LogAdditional,
 	},
-	Before: func(ctx *cli.Context) error {
-		if ctx.Bool(flags.NameVerbose) {
-			log.SetLevel(log.DebugLevel)
-		}
-		return nil
-	},
+	Before: common.Before,
 }
 
 func main() {

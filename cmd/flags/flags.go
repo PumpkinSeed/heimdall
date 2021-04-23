@@ -4,6 +4,9 @@ import "github.com/urfave/cli/v2"
 
 const (
 	NameVerbose       = "verbose"
+	NameLogOutput     = "log-output"
+	NameLogAdditional = "log-additional"
+
 	NameGrpc          = "grpc"
 	NameRest          = "rest"
 	NameSocket        = "socket"
@@ -21,6 +24,15 @@ const (
 var (
 	Verbose = &cli.BoolFlag{
 		Name: NameVerbose,
+	}
+	LogOutput = &cli.StringFlag{
+		Name:  NameLogOutput,
+		Usage: "Set the log output",
+		Value: "sout",
+	}
+	LogAdditional = &cli.StringFlag{
+		Name:  NameLogAdditional,
+		Usage: "Additional data for logger\nSyslog example: \"network=tcp;address=localhost:6060\"",
 	}
 
 	Grpc = &cli.StringFlag{
