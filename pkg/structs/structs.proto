@@ -10,6 +10,9 @@ service Encryption {
 
     rpc Encrypt (EncryptRequest) returns (CryptoResult);
     rpc Decrypt (DecryptRequest) returns (CryptoResult);
+
+    rpc Hash (HashRequest) returns (HashResponse);
+    rpc GenerateHMAC (HMACRequest) returns (HMACResponse);
 }
 
 message Empty {
@@ -62,5 +65,26 @@ message DecryptRequest {
 }
 
 message CryptoResult {
+    string result = 1;
+}
+
+message HashRequest {
+    string algorithm = 1;
+    string input = 2;
+    string format = 3;
+}
+
+message HashResponse {
+    string result = 1;
+}
+
+message HMACRequest {
+    string keyName = 1;
+    int64 keyVersion = 2;
+    string algorithm = 3;
+    string input = 4;
+}
+
+message HMACResponse {
     string result = 1;
 }

@@ -128,6 +128,28 @@ func (s server) Decrypt(ctx context.Context, req *structs.DecryptRequest) (*stru
 	}, err
 }
 
+func (s server) Hash(ctx context.Context, req *structs.HashRequest) (*structs.HashResponse, error) {
+	hash, err := s.transit.Hash(ctx, req.Input, req.Algorithm, req.Format)
+	if err != nil {
+		log.Errorf("Error hashing: %v", err)
+	}
+
+	return &structs.HashResponse{
+		Result: hash,
+	}, err
+}
+
+func (s server) GenerateHMAC(ctx context.Context, req *structs.HMACRequest) (*structs.HMACResponse, error) {
+	hmac, err := s.transit.HMAC(ctx, req.KeyName, req.Input, req.Algorithm, int(req.KeyVersion))
+	if err != nil {
+		log.Errorf("Error HMAC generating: %v", err)
+	}
+
+	return &structs.HMACResponse{
+		Result: hmac,
+	}, err
+}
+
 func getStatus(err error) structs.Status {
 	if err != nil {
 		return structs.Status_ERROR
