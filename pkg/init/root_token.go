@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -17,60 +18,53 @@ import (
 	"time"
 )
 
-func (init *Init) getRootToken(ctx context.Context,) (*logical.TokenEntry, error) {
+const (
+	rootTokenEntryPath = "auth/token/root"
+	rootTokenPolicy    = "root"
+)
+
+func (init *Init) getRootToken(ctx context.Context, ) (*logical.TokenEntry, error) {
 	ctx = namespace.ContextWithNamespace(ctx, namespace.RootNamespace)
 	te := &logical.TokenEntry{
-		Policies:     []string{"root"},
-		Path:         "auth/token/root",
-		DisplayName:  "root",
+		Policies:     []string{rootTokenPolicy},
+		Path:         rootTokenEntryPath,
+		DisplayName:  rootTokenPolicy,
 		CreationTime: time.Now().Unix(),
 		NamespaceID:  namespace.RootNamespaceID,
 		Type:         logical.TokenTypeService,
 	}
 	tokenNS, err := init.NamespaceByID(ctx, te.NamespaceID)
 	if err != nil {
-		//return err
+		return nil, err
 	}
 	if tokenNS == nil {
-		//return namespace.ErrNoNamespace
+		return nil, errors.New("missing token")
 	}
 
 	te.Policies = policyutil.SanitizePolicies(te.Policies, policyutil.DoNotAddDefaultPolicy)
-	var createRootTokenFlag bool
-	if len(te.Policies) == 1 && te.Policies[0] == "root" {
-		createRootTokenFlag = true
-	}
+	//
+	//var createRootTokenFlag bool
+	//if len(te.Policies) == 1 && te.Policies[0] == "root" {
+	//	createRootTokenFlag = true
+	//}
 
 	// In case it was default, force to service
 	te.Type = logical.TokenTypeService
 
 	// Generate an ID if necessary
-	userSelectedID := true
-	if te.ID == "" {
-		userSelectedID = false
-		var err error
-		if createRootTokenFlag {
-			te.ID, err = base62.RandomWithReader(TokenLength, rand.Reader)
-		} else {
-			te.ID, err = base62.Random(TokenLength)
-		}
-		if err != nil {
-			//return err
-		}
-	}
+	//userSelectedID := true
+	//if te.ID == "" {
+	//	userSelectedID = false
+	te.ID, err = base62.RandomWithReader(TokenLength, rand.Reader)
 
-	if userSelectedID {
-		switch {
-		case strings.HasPrefix(te.ID, "s."):
-			//return fmt.Errorf("custom token ID cannot have the 's.' prefix")
-		case strings.Contains(te.ID, "."):
-			//return fmt.Errorf("custom token ID cannot have a '.' in the value")
-		}
+	if err != nil {
+		return nil, err
 	}
+	//}
 
-	if !userSelectedID {
-		te.ID = fmt.Sprintf("s.%s", te.ID)
-	}
+	//if !userSelectedID {
+	te.ID = fmt.Sprintf("s.%s", te.ID)
+	//}
 
 	// Attach namespace ID for tokens that are not belonging to the root
 	// namespace
@@ -82,7 +76,7 @@ func (init *Init) getRootToken(ctx context.Context,) (*logical.TokenEntry, error
 		if te.CubbyholeID == "" {
 			cubbyholeID, err := base62.Random(TokenLength)
 			if err != nil {
-				//return err
+				return nil, err
 			}
 			te.CubbyholeID = cubbyholeID
 		}
@@ -90,24 +84,19 @@ func (init *Init) getRootToken(ctx context.Context,) (*logical.TokenEntry, error
 
 	// If the user didn't specifically pick the ID, e.g. because they were
 	// sudo/root, check for collision; otherwise trust the process
-	if userSelectedID {
-		exist, _ := init.lookupInternal(ctx, te.ID, false, true)
-		if exist != nil {
-			//return fmt.Errorf("cannot create a token with a duplicate ID")
-		}
-	}
+	//if userSelectedID {
+	//	exist, _ := init.lookupInternal(ctx, te.ID, false, true)
+	//	if exist != nil {
+	//		return fmt.Errorf("cannot create a token with a duplicate ID")
+	//	}
+	//}
 
 	err = init.createAccessor(ctx, te)
 	if err != nil {
-		//return err
+		return nil, err
 	}
 
-	// Update the activity log
-	//if ts.activityLog != nil {
-	//	ts.activityLog.HandleTokenCreation(te)
-	//}
-
-	if err :=  init.storeCommon(ctx, te, true); err != nil {
+	if err := init.storeCommon(ctx, te, true); err != nil {
 		return nil, err
 	}
 	return te, nil
@@ -155,12 +144,12 @@ func (init *Init) createAccessor(ctx context.Context, entry *logical.TokenEntry)
 
 	aEntryBytes, err := jsonutil.EncodeJSON(aEntry)
 	if err != nil {
-		return errwrap.Wrapf("failed to marshal accessor index entry: {{err}}", err)
+		return fmt.Errorf("failed to marshal accessor index entry: %v", err)
 	}
 
 	le := &logical.StorageEntry{Key: saltID, Value: aEntryBytes}
 	if err := init.accessorBarrierView.Put(ctx, le); err != nil {
-		return errwrap.Wrapf("failed to persist accessor index entry: {{err}}", err)
+		return fmt.Errorf("failed to persist accessor index entry: %v", err)
 	}
 	return nil
 
@@ -174,7 +163,7 @@ func (init *Init) lookupInternal(ctx context.Context, id string, salted, tainted
 
 	// If it starts with "b." it's a batch token
 	if len(id) > 2 && strings.HasPrefix(id, "b.") {
-		//return ts.lookupBatchToken(ctx, id)
+		return nil, err
 	}
 
 	var raw *logical.StorageEntry
@@ -288,56 +277,13 @@ func (init *Init) lookupInternal(ctx context.Context, id string, salted, tainted
 		return entry, nil
 	}
 
-	// Perform these checks on upgraded fields, but before persisting
-
-	// If we are still restoring the expiration manager, we want to ensure the
-	// token is not expired
-	// TODO
-	//if init.expirationManager == nil {
-	//	return nil, errors.New("expiration manager is nil on tokenstore")
-	//}
-	//le, err := init.expirationManager.FetchLeaseTimesByToken(ctx, entry)
-	//if err != nil {
-	//	return nil, errwrap.Wrapf("failed to fetch lease times: {{err}}", err)
-	//}
-
 	var ret *logical.TokenEntry
 
-	// TODO
-	//switch {
-	// It's any kind of expiring token with no lease, immediately delete it
-	//case le == nil:
-	//	tokenNS, err := init.NamespaceByID(ctx, entry.NamespaceID)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	if tokenNS == nil {
-	//		return nil, namespace.ErrNoNamespace
-	//	}
-
-		//revokeCtx := namespace.ContextWithNamespace(ts.quitContext, tokenNS)
-		//leaseID, err := init.expirationManager.CreateOrFetchRevocationLeaseByToken(revokeCtx, entry)
-		//if err != nil {
-		//	return nil, err
-		//}
-
-		//err = ts.expiration.Revoke(revokeCtx, leaseID)
-		//if err != nil {
-		//	return nil, err
-		//}
-
-	// Only return if we're not past lease expiration (or if tainted is true),
-	// otherwise assume expmgr is working on revocation
-	//default:
-	//	if !le.ExpireTime.Before(time.Now()) || tainted {
-	//		ret = entry
-	//	}
-	//}
 
 	// If fields are getting upgraded, store the changes
 	if persistNeeded {
 		if err := init.store(ctx, entry); err != nil {
-			return nil, errwrap.Wrapf("failed to persist token upgrade: {{err}}", err)
+			return nil, fmt.Errorf("failed to persist token upgrade: %v", err)
 		}
 	}
 
@@ -482,7 +428,7 @@ func (init *Init) Lookup(ctx context.Context, id string) (*logical.TokenEntry, e
 
 	// If it starts with "b." it's a batch token
 	if len(id) > 2 && strings.HasPrefix(id, "b.") {
-		//return ts.lookupBatchToken(ctx, id)
+		return nil, nil
 	}
 
 	lock := locksutil.LockForKey(init.tokenLocks, id)

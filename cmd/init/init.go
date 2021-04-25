@@ -16,6 +16,8 @@ var Cmd = &cli.Command{
 	Action: initAction,
 	Flags: []cli.Flag{
 		flags.Socket,
+		flags.Threshold,
+		flags.TotalShares,
 	},
 }
 
@@ -27,10 +29,12 @@ func initAction(ctx *cli.Context) error {
 	defer c.Close()
 
 	log.Debugf("initializing Bifröst (Heimdall's init operator")
+
 	initParams := initcommand.Request{
-		SecretShares:    5,
-		SecretThreshold: 3,
+		SecretShares:    ctx.Int(flags.NameTotalShares),
+		SecretThreshold: ctx.Int(flags.NameThreshold),
 	}
+
 	data, err := json.Marshal(initParams)
 	if err != nil {
 		return err

@@ -7,16 +7,16 @@ import (
 	"fmt"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	"github.com/PumpkinSeed/heimdall/pkg/seal"
-	"github.com/hashicorp/errwrap"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault"
+	"log"
 	"sync"
 )
 
-var TokenLength = 24
+const TokenLength = 24
 
 
 type Request struct {
@@ -29,6 +29,9 @@ type Result struct {
 	RootToken      string
 }
 var (
+	// shamirType is the type for the seal config
+	shamirType = "shamir"
+
 	// idPrefix is the prefix used to store tokens for their
 	// primary ID based index
 	idPrefix = "id/"
@@ -51,7 +54,6 @@ var (
 )
 
 func NewInit(unseal *unseal.Unseal) *Init {
-	//vault.NewBarrierView(unseal.SecurityBarrier,"sys/")
 	view := vault.NewBarrierView(unseal.SecurityBarrier, "sys/"+ tokenSubPath)
 
 	return &Init{
@@ -64,7 +66,6 @@ func NewInit(unseal *unseal.Unseal) *Init {
 		rolesBarrierView:    view.SubView(rolesPrefix),
 		saltLock:            sync.RWMutex{},
 		tokenLocks:          locksutil.CreateLocks(),
-		//expirationManager:   nil,
 	}
 }
 
@@ -80,25 +81,14 @@ type Init struct {
 
 	saltLock sync.RWMutex
 	tokenLocks []*locksutil.LockEntry
-
-	// mounts is loaded after unseal since it is a protected
-	// configuration
-	mounts *vault.MountTable
-
-	//expirationManager *vault.ExpirationManager
 }
 
-func (init *Init) SetMountTables(mounts *vault.MountTable) {
-	init.mounts = mounts
-}
-
-func (init *Init) Initialize(req Request) (Result, error) {
-	ctx := context.Background()
+func (init *Init) Initialize(ctx context.Context, req Request) (Result, error) {
 	seal := seal.New(init.unseal.Backend, seal.NewSealAccess())
 	if err := seal.Init(context.Background()); err != nil {
 		return Result{},err
 	}
-	barrierKey, barrierKeyShares, err := generateShares(req)
+	barrierKey, _, err := generateShares(req)
 	if err != nil {
 		return Result{},err
 	}
@@ -115,15 +105,16 @@ func (init *Init) Initialize(req Request) (Result, error) {
 	if err := securityBarrier.Unseal(context.Background(),barrierKey); err != nil {
 		return Result{},err
 	}
+
 	defer func(securityBarrier vault.SecurityBarrier) {
 		err := securityBarrier.Seal()
 		if err != nil {
-			panic(err)
+			log.Println(err)
 		}
 	}(securityBarrier)
 
 	if err := seal.SetBarrierConfig(context.Background(),&vault.SealConfig{
-		Type:                 "shamir",
+		Type:                 shamirType,
 		SecretShares:         req.SecretShares,
 		SecretThreshold:      req.SecretThreshold,
 
@@ -135,21 +126,15 @@ func (init *Init) Initialize(req Request) (Result, error) {
 		return Result{},err
 	}
 	if err := seal.SetStoredKeys(ctx, [][]byte{barrierKey}); err != nil {
-		return Result{}, errwrap.Wrapf("failed to store keys: {{err}}", err)
+		return Result{}, fmt.Errorf("failed to store keys: {{err}}", err)
 	}
 
-	fmt.Println(barrierKeyShares)
-	for _, keys := range sealKeyShares {
-		fmt.Println(string(keys))
-	}
 	rootToken, err := init.getRootToken(ctx)
 	if err != nil {
 		return Result{}, err
 	}
 
-	// TODO mount tables
-
-	if err := PersistMounts(ctx,init.mounts); err != nil {
+	if err := persistMounts(ctx); err != nil {
 		return Result{}, err
 	}
 
@@ -169,12 +154,11 @@ func generateShares(req Request) ([]byte, [][]byte, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	// TODO encode unseal keys with pgp keys if it's nessecary
+	// NOTE encode unseal keys with pgp keys if it's nessecary
 	return masterKey, unSealKeys, nil
 }
 
 func generateKey() ([]byte,error) {
-	// Generate a 256bit key
 	buf := make([]byte, 2*aes.BlockSize)
 	_, err := rand.Reader.Read(buf)
 

@@ -17,18 +17,16 @@ const (
 )
 
 
-func PersistMounts(ctx context.Context, table *vault.MountTable) error {
-	if table == nil {
-		table = &vault.MountTable{}
-	}
+func persistMounts(ctx context.Context) error {
 	uuid, _ := generateUUID()
 	backendAwareUUID, _ := generateUUID()
+
 	// Create the mount entry
 	entry := &vault.MountEntry{
 		Table:                 "mounts", // mountTableType - the table it belongs to
 		Path:                  "transit/",//CorePath, // Mount Path
 		Type:                  "transit", // Logical backend type
-		Description:           "description",
+		Description:           "",
 		Config:                vault.MountConfig{}, // Configuration related to this mount (but not backend-derived)
 		Local:                 false, // Local mounts are not replicated or affected by replication
 		SealWrap:              false, // Whether to wrap CSPs
@@ -40,62 +38,38 @@ func PersistMounts(ctx context.Context, table *vault.MountTable) error {
 		NamespaceID: "root",
 	}
 
+
 	accessor, err :=  generateMountAccessor(entry.Type)
 	if err != nil {
 		return err
 	}
 	entry.Accessor = accessor
 
-
 	// Sync values to the cache
 	entry.SyncCache()
 
-	// TODO
-	//viewPath := entry.ViewPath()
-	//view := vault.NewBarrierView(unseal.Get().SecurityBarrier, viewPath)
-	// preprocessMount
-
-
-
 	nonLocalMounts := &vault.MountTable{
 		Type: mountTablePath,
+		Entries: []*vault.MountEntry{},
 	}
+	nonLocalMounts.Entries = append(nonLocalMounts.Entries, entry)
 
-	for _, entry := range table.Entries {
-		if !entry.Local {
-			nonLocalMounts.Entries = append(nonLocalMounts.Entries, entry)
-		}
-	}
+	barrier := unseal.Get().SecurityBarrier
 
-	// TODO lock
-
-	writeTable := func(mt *vault.MountTable, path string) ([]byte, error) {
-		barrier := unseal.Get().SecurityBarrier
-
-		// Encode the mount table into JSON and compress it (lzw).
-		compressedBytes, err := jsonutil.EncodeJSONAndCompress(mt, nil)
-		if err != nil {
-			return nil, err
-		}
-
-		// Create an entry
-		entry := &logical.StorageEntry{
-			Key:   path,
-			Value: compressedBytes,
-		}
-
-		// Write to the physical backend
-		if err := barrier.Put(ctx, entry); err != nil {
-			return nil, err
-		}
-		return compressedBytes, nil
-	}
-
-	_, err = writeTable(nonLocalMounts, "core/mounts")
+	// Encode the mount table into JSON and compress it (lzw).
+	compressedBytes, err := jsonutil.EncodeJSONAndCompress(nonLocalMounts, nil)
 	if err != nil {
 		return err
 	}
-	return nil
+
+	// Create an entry
+	mountEntry := &logical.StorageEntry{
+		Key:   "core/mounts",
+		Value: compressedBytes,
+	}
+
+	// Write to the physical backend
+	return barrier.Put(ctx, mountEntry)
 }
 
 func generateUUID() (string, error) {
@@ -108,16 +82,12 @@ func generateUUID() (string, error) {
 
 func generateMountAccessor(entryType string) (string, error) {
 	var accessor string
-	//for {
 	randBytes, err := uuid.GenerateRandomBytes(4)
 	if err != nil {
 		return "", err
 	}
+
 	accessor = fmt.Sprintf("%s_%s", entryType, fmt.Sprintf("%08x", randBytes[0:4]))
-	//if entry := c.router.MatchingMountByAccessor(accessor); entry == nil {
-	//	break
-	//}
-	//}
 
 	return accessor, nil
 }

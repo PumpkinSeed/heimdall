@@ -6,12 +6,9 @@ import (
 	"github.com/PumpkinSeed/heimdall/internal/structs"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	initcommand "github.com/PumpkinSeed/heimdall/pkg/init"
-	"github.com/hashicorp/vault/vault"
 )
 
-type Init struct {
-
-}
+type Init struct {}
 
 func NewInit() Init {
 	return Init{}
@@ -25,14 +22,16 @@ func (i Init) Handler(ctx context.Context, req structs.SocketRequest) (structs.S
 
 	u := unseal.Get()
 	init := initcommand.NewInit(u)
-	table := &vault.MountTable{
-		Type:    "mounts",
-		Entries: []*vault.MountEntry{},
+
+	// set totalShares and threshold if it's not empty
+	if initParams.SecretShares != 0 {
+		u.TotalShares = initParams.SecretShares
+	}
+	if initParams.SecretThreshold != 0 {
+		u.Threshold = initParams.SecretThreshold
 	}
 
-	init.SetMountTables(table)
-
-	res, err := init.Initialize(initParams)
+	res, err := init.Initialize(ctx, initParams)
 	if err != nil {
 		return structs.SocketResponse{}, err
 	}
@@ -45,5 +44,4 @@ func (i Init) Handler(ctx context.Context, req structs.SocketRequest) (structs.S
 	return structs.SocketResponse{
 		Data: data,
 	}, nil
-
 }

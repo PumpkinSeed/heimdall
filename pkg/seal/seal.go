@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	"github.com/golang/protobuf/proto"
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
@@ -34,29 +33,25 @@ type seal struct {
 	tokenStore *vault.TokenStore
 }
 
-func (s *seal) SetCore(core *vault.Core) {
-	panic("implement me")
-}
+func (s *seal) SetCore(core *vault.Core) {}
 
 func (s *seal) Init(ctx context.Context) error {
 	return nil
 }
 
 func (s *seal) Finalize(ctx context.Context) error {
-	panic("implement me")
+	return nil
 }
 
 func (s *seal) StoredKeysSupported() vaultseal.StoredKeysSupport {
-	panic("implement me")
+	return 0
 }
 
 func (s *seal) SealWrapable() bool {
-	panic("implement me")
+	return false
 }
 
 func (s *seal) SetStoredKeys(ctx context.Context, keys [][]byte) error {
-	//writeStoredKeys(ctx, d.core.physical, d.access, keys)
-
 	if keys == nil {
 		return fmt.Errorf("keys were nil")
 	}
@@ -66,18 +61,18 @@ func (s *seal) SetStoredKeys(ctx context.Context, keys [][]byte) error {
 
 	buf, err := json.Marshal(keys)
 	if err != nil {
-		return errwrap.Wrapf("failed to encode keys for storage: {{err}}", err)
+		return fmt.Errorf("failed to encode keys for storage: %v", err)
 	}
 
 	// Encrypt and marshal the keys
 	blobInfo, err := s.access.Encrypt(ctx, buf, nil)
 	if err != nil {
-		return errwrap.Wrapf("failed to encrypt keys for storage: {{err}}", err)
+		return fmt.Errorf("failed to encrypt keys for storage: %v", err)
 	}
 
 	value, err := proto.Marshal(blobInfo)
 	if err != nil {
-		return errwrap.Wrapf("failed to marshal value for storage: {{err}}", err)
+		return fmt.Errorf("failed to marshal value for storage: %v", err)
 	}
 
 	// Store the seal configuration.
@@ -87,22 +82,22 @@ func (s *seal) SetStoredKeys(ctx context.Context, keys [][]byte) error {
 	}
 
 	if err := s.physical.Put(ctx, pe); err != nil {
-		return errwrap.Wrapf("failed to write keys to storage: {{err}}", err)
+		return fmt.Errorf("failed to write keys to storage: %v", err)
 	}
 
 	return nil
 }
 
 func (s *seal) GetStoredKeys(ctx context.Context) ([][]byte, error) {
-	panic("implement me")
+	return nil, nil
 }
 
 func (s *seal) BarrierType() string {
-	panic("implement me")
+	return ""
 }
 
 func (s *seal) BarrierConfig(ctx context.Context) (*vault.SealConfig, error) {
-	panic("implement me")
+	return nil, nil
 }
 
 func (s *seal) SetBarrierConfig(ctx context.Context, config *vault.SealConfig) error {
@@ -115,11 +110,10 @@ func (s *seal) SetBarrierConfig(ctx context.Context, config *vault.SealConfig) e
 
 	config.Type = wrapping.Shamir
 
-
 	// Encode the seal configuration
 	buf, err := json.Marshal(config)
 	if err != nil {
-		return errwrap.Wrapf("failed to encode seal configuration: {{err}}", err)
+		return fmt.Errorf("failed to encode seal configuration: %v", err)
 	}
 
 	// Store the seal configuration
@@ -129,8 +123,7 @@ func (s *seal) SetBarrierConfig(ctx context.Context, config *vault.SealConfig) e
 	}
 
 	if err := s.physical.Put(ctx, pe); err != nil {
-		//d.core.logger.Error("failed to write seal configuration", "error", err)
-		return errwrap.Wrapf("failed to write seal configuration: {{err}}", err)
+		return fmt.Errorf("failed to write seal configuration: %v", err)
 	}
 
 	s.SetCachedBarrierConfig(config.Clone())
@@ -143,35 +136,33 @@ func (s *seal) SetCachedBarrierConfig(config *vault.SealConfig) {
 }
 
 func (s *seal) RecoveryKeySupported() bool {
-	panic("implement me")
+	return false
 }
 
 func (s *seal) RecoveryType() string {
-	panic("implement me")
+	return ""
 }
 
 func (s *seal) RecoveryConfig(ctx context.Context) (*vault.SealConfig, error) {
-	panic("implement me")
+	return nil, nil
 }
 
 func (s *seal) RecoveryKey(ctx context.Context) ([]byte, error) {
-	panic("implement me")
+	return nil, nil
 }
 
 func (s *seal) SetRecoveryConfig(ctx context.Context, config *vault.SealConfig) error {
-	panic("implement me")
+	return nil
 }
 
-func (s *seal) SetCachedRecoveryConfig(config *vault.SealConfig) {
-	panic("implement me")
-}
+func (s *seal) SetCachedRecoveryConfig(config *vault.SealConfig) {}
 
 func (s *seal) SetRecoveryKey(ctx context.Context, bytes []byte) error {
-	panic("implement me")
+	return nil
 }
 
 func (s *seal) VerifyRecoveryKey(ctx context.Context, bytes []byte) error {
-	panic("implement me")
+	return nil
 }
 
 func (s *seal) GetAccess() *vaultseal.Access {
