@@ -5,7 +5,6 @@ import (
 	"crypto/aes"
 	"crypto/rand"
 	"fmt"
-	"log"
 	"sync"
 
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
@@ -15,6 +14,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault"
+	log "github.com/sirupsen/logrus"
 )
 
 const TokenLength = 24

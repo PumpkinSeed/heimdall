@@ -1,10 +1,10 @@
 package main
 
 import (
-	initcommand "github.com/PumpkinSeed/heimdall/cmd/init"
 	"os"
 
 	"github.com/PumpkinSeed/heimdall/cmd/flags"
+	initcommand "github.com/PumpkinSeed/heimdall/cmd/init"
 	"github.com/PumpkinSeed/heimdall/cmd/server"
 	"github.com/PumpkinSeed/heimdall/cmd/unseal"
 	log "github.com/sirupsen/logrus"

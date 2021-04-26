@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/base62"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -43,29 +42,17 @@ func (init *Init) getRootToken(ctx context.Context) (*logical.TokenEntry, error)
 	}
 
 	te.Policies = policyutil.SanitizePolicies(te.Policies, policyutil.DoNotAddDefaultPolicy)
-	//
-	//var createRootTokenFlag bool
-	//if len(te.Policies) == 1 && te.Policies[0] == "root" {
-	//	createRootTokenFlag = true
-	//}
 
 	// In case it was default, force to service
 	te.Type = logical.TokenTypeService
 
-	// Generate an ID if necessary
-	//userSelectedID := true
-	//if te.ID == "" {
-	//	userSelectedID = false
 	te.ID, err = base62.RandomWithReader(TokenLength, rand.Reader)
 
 	if err != nil {
 		return nil, err
 	}
-	//}
 
-	//if !userSelectedID {
 	te.ID = fmt.Sprintf("s.%s", te.ID)
-	//}
 
 	// Attach namespace ID for tokens that are not belonging to the root
 	// namespace
@@ -82,15 +69,6 @@ func (init *Init) getRootToken(ctx context.Context) (*logical.TokenEntry, error)
 			te.CubbyholeID = cubbyholeID
 		}
 	}
-
-	// If the user didn't specifically pick the ID, e.g. because they were
-	// sudo/root, check for collision; otherwise trust the process
-	//if userSelectedID {
-	//	exist, _ := init.lookupInternal(ctx, te.ID, false, true)
-	//	if exist != nil {
-	//		return fmt.Errorf("cannot create a token with a duplicate ID")
-	//	}
-	//}
 
 	err = init.createAccessor(ctx, te)
 	if err != nil {
@@ -159,7 +137,7 @@ func (init *Init) createAccessor(ctx context.Context, entry *logical.TokenEntry)
 func (init *Init) lookupInternal(ctx context.Context, id string, salted, tainted bool) (*logical.TokenEntry, error) {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to find namespace in context: {{err}}", err)
+		return nil, fmt.Errorf("failed to find namespace in context: %v", err)
 	}
 
 	// If it starts with "b." it's a batch token
@@ -177,7 +155,7 @@ func (init *Init) lookupInternal(ctx context.Context, id string, salted, tainted
 		if nsID != "" {
 			tokenNS, err := init.NamespaceByID(ctx, nsID)
 			if err != nil {
-				return nil, errwrap.Wrapf("failed to look up namespace from the token: {{err}}", err)
+				return nil, fmt.Errorf("failed to look up namespace from the token: %v", err)
 			}
 			if tokenNS != nil {
 				if tokenNS.ID != ns.ID {
@@ -201,7 +179,7 @@ func (init *Init) lookupInternal(ctx context.Context, id string, salted, tainted
 
 	raw, err = init.idBarrierView.Get(ctx, lookupID)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to read entry: {{err}}", err)
+		return nil, fmt.Errorf("failed to read entry: %v", err)
 	}
 
 	// Bail if not found
@@ -212,7 +190,7 @@ func (init *Init) lookupInternal(ctx context.Context, id string, salted, tainted
 	// Unmarshal the token
 	entry := new(logical.TokenEntry)
 	if err := jsonutil.DecodeJSON(raw.Value, entry); err != nil {
-		return nil, errwrap.Wrapf("failed to decode entry: {{err}}", err)
+		return nil, fmt.Errorf("failed to decode entry: %v", err)
 	}
 
 	// This is a token that is awaiting deferred revocation or tainted
@@ -272,7 +250,7 @@ func (init *Init) lookupInternal(ctx context.Context, id string, salted, tainted
 		// If fields are getting upgraded, store the changes
 		if persistNeeded {
 			if err := init.store(ctx, entry); err != nil {
-				return nil, errwrap.Wrapf("failed to persist token upgrade: {{err}}", err)
+				return nil, fmt.Errorf("failed to persist token upgrade: %v", err)
 			}
 		}
 		return entry, nil
@@ -364,7 +342,7 @@ func (init *Init) storeCommon(ctx context.Context, entry *logical.TokenEntry, wr
 	// Marshal the entry
 	enc, err := json.Marshal(entry)
 	if err != nil {
-		return errwrap.Wrapf("failed to encode entry: {{err}}", err)
+		return fmt.Errorf("failed to encode entry: %v", err)
 	}
 
 	if writeSecondary {
@@ -376,7 +354,7 @@ func (init *Init) storeCommon(ctx context.Context, entry *logical.TokenEntry, wr
 			// Ensure the parent exists
 			parent, err := init.Lookup(ctx, entry.Parent)
 			if err != nil {
-				return errwrap.Wrapf("failed to lookup parent: {{err}}", err)
+				return fmt.Errorf("failed to lookup parent: %v", err)
 			}
 			if parent == nil {
 				return fmt.Errorf("parent token not found")
@@ -405,7 +383,7 @@ func (init *Init) storeCommon(ctx context.Context, entry *logical.TokenEntry, wr
 
 			le := &logical.StorageEntry{Key: path}
 			if err := init.parentBarrierView.Put(ctx, le); err != nil {
-				return errwrap.Wrapf("failed to persist entry: {{err}}", err)
+				return fmt.Errorf("failed to persist entry: %v", err)
 			}
 		}
 	}
@@ -416,7 +394,7 @@ func (init *Init) storeCommon(ctx context.Context, entry *logical.TokenEntry, wr
 		le.SealWrap = true
 	}
 	if err := init.idBarrierView.Put(ctx, le); err != nil {
-		return errwrap.Wrapf("failed to persist entry: {{err}}", err)
+		return fmt.Errorf("failed to persist entry: %v", err)
 	}
 	return nil
 }

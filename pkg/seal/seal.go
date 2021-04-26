@@ -3,6 +3,7 @@ package seal
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	"github.com/golang/protobuf/proto"
@@ -53,10 +54,10 @@ func (s *seal) SealWrapable() bool {
 
 func (s *seal) SetStoredKeys(ctx context.Context, keys [][]byte) error {
 	if keys == nil {
-		return fmt.Errorf("keys were nil")
+		return errors.New("keys were nil")
 	}
 	if len(keys) == 0 {
-		return fmt.Errorf("no keys provided")
+		return errors.New("no keys provided")
 	}
 
 	buf, err := json.Marshal(keys)
@@ -93,7 +94,7 @@ func (s *seal) GetStoredKeys(ctx context.Context) ([][]byte, error) {
 }
 
 func (s *seal) BarrierType() string {
-	return ""
+	return wrapping.Shamir
 }
 
 func (s *seal) BarrierConfig(ctx context.Context) (*vault.SealConfig, error) {

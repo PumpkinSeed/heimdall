@@ -9,10 +9,14 @@ import (
 	initcommand "github.com/PumpkinSeed/heimdall/pkg/init"
 )
 
-type Init struct{}
+type Init struct {
+	unseal *unseal.Unseal
+}
 
-func NewInit() Init {
-	return Init{}
+func NewInit(u *unseal.Unseal) Init {
+	return Init{
+		unseal: u,
+	}
 }
 
 func (i Init) Handler(ctx context.Context, req structs.SocketRequest) (structs.SocketResponse, error) {
@@ -21,16 +25,10 @@ func (i Init) Handler(ctx context.Context, req structs.SocketRequest) (structs.S
 		return structs.SocketResponse{}, err
 	}
 
-	u := unseal.Get()
-	init := initcommand.NewInit(u)
+	init := initcommand.NewInit(i.unseal)
 
-	// set totalShares and threshold if it's not empty
-	if initParams.SecretShares != 0 {
-		u.TotalShares = initParams.SecretShares
-	}
-	if initParams.SecretThreshold != 0 {
-		u.Threshold = initParams.SecretThreshold
-	}
+	i.unseal.TotalShares = initParams.SecretShares
+	i.unseal.Threshold = initParams.SecretThreshold
 
 	res, err := init.Initialize(ctx, initParams)
 	if err != nil {

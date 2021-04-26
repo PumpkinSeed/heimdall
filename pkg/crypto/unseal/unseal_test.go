@@ -28,10 +28,6 @@ func TestUnseal_Unseal(t *testing.T) {
 		ValueHash: nil,
 	}, nil)
 
-	//sb := mockSecurityBarrier{
-	//	Backend: &m,
-	//}
-
 	u := Unseal{Threshold: 3, Backend: &m}
 
 	var ok bool

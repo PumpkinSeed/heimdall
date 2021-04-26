@@ -20,7 +20,7 @@ type Server interface {
 
 func initServers(u *unseal.Unseal) {
 	servers[structs.SocketUnseal] = services.NewUnseal(u)
-	servers[structs.SocketInit] = services.NewInit()
+	servers[structs.SocketInit] = services.NewInit(u)
 }
 
 func Serve(addr string) error {
