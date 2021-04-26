@@ -22,7 +22,6 @@ var (
 	ErrGCMCreate   = errors.New("failed to initialize GCM mode")
 )
 
-
 func Init(ctx context.Context, b physical.Backend, mk []byte) (*vault.Keyring, error) {
 	out, err := b.Get(ctx, Path)
 	if err != nil {
@@ -57,7 +56,6 @@ func Init(ctx context.Context, b physical.Backend, mk []byte) (*vault.Keyring, e
 
 	return keyringDes, nil
 }
-
 
 func AeadForTerm(kr *vault.Keyring, term uint32) (cipher.AEAD, error) {
 	// Read the underlying Key

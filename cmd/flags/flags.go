@@ -11,14 +11,16 @@ const (
 	NameRest          = "rest"
 	NameSocket        = "socket"
 	NameThreshold     = "threshold"
+	NameTotalShares   = "total-shares"
 	NameConsulAddress = "consul-address"
 	NameConsulToken   = "consul-token"
 	NameInMemory      = "in-memory"
 
-	grpcDefaultAddr   = "0.0.0.0:9090"
-	restDefaultAddr   = "0.0.0.0:8080"
-	socketDefaultPath = "/tmp/heimdall.sock"
-	thresholdDefault  = 3
+	grpcDefaultAddr    = "0.0.0.0:9090"
+	restDefaultAddr    = "0.0.0.0:8080"
+	socketDefaultPath  = "/tmp/heimdall.sock"
+	thresholdDefault   = 3
+	totalSharesDefault = 5
 )
 
 var (
@@ -55,6 +57,12 @@ var (
 		Name:  NameThreshold,
 		Usage: "The shamir's threshold",
 		Value: thresholdDefault,
+	}
+
+	TotalShares = &cli.IntFlag{
+		Name:  NameTotalShares,
+		Usage: "The shamir's total shares",
+		Value: totalSharesDefault,
 	}
 
 	// TODO add flag to handle multiple database types
