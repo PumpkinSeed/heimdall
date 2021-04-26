@@ -125,7 +125,7 @@ func (init *Init) Initialize(ctx context.Context, req Request) (Result, error) {
 		return Result{}, err
 	}
 	if err := seal.SetStoredKeys(ctx, [][]byte{barrierKey}); err != nil {
-		return Result{}, fmt.Errorf("failed to store keys: %v", err)
+		return Result{}, fmt.Errorf("failed to store keys: %w", err)
 	}
 
 	rootToken, err := init.getRootToken(ctx)

@@ -123,12 +123,12 @@ func (init *Init) createAccessor(ctx context.Context, entry *logical.TokenEntry)
 
 	aEntryBytes, err := jsonutil.EncodeJSON(aEntry)
 	if err != nil {
-		return fmt.Errorf("failed to marshal accessor index entry: %v", err)
+		return fmt.Errorf("failed to marshal accessor index entry: %w", err)
 	}
 
 	le := &logical.StorageEntry{Key: saltID, Value: aEntryBytes}
 	if err := init.accessorBarrierView.Put(ctx, le); err != nil {
-		return fmt.Errorf("failed to persist accessor index entry: %v", err)
+		return fmt.Errorf("failed to persist accessor index entry: %w", err)
 	}
 	return nil
 
@@ -137,7 +137,7 @@ func (init *Init) createAccessor(ctx context.Context, entry *logical.TokenEntry)
 func (init *Init) lookupInternal(ctx context.Context, id string, salted, tainted bool) (*logical.TokenEntry, error) {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find namespace in context: %v", err)
+		return nil, fmt.Errorf("failed to find namespace in context: %w", err)
 	}
 
 	// If it starts with "b." it's a batch token
@@ -155,7 +155,7 @@ func (init *Init) lookupInternal(ctx context.Context, id string, salted, tainted
 		if nsID != "" {
 			tokenNS, err := init.NamespaceByID(ctx, nsID)
 			if err != nil {
-				return nil, fmt.Errorf("failed to look up namespace from the token: %v", err)
+				return nil, fmt.Errorf("failed to look up namespace from the token: %w", err)
 			}
 			if tokenNS != nil {
 				if tokenNS.ID != ns.ID {
@@ -179,7 +179,7 @@ func (init *Init) lookupInternal(ctx context.Context, id string, salted, tainted
 
 	raw, err = init.idBarrierView.Get(ctx, lookupID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read entry: %v", err)
+		return nil, fmt.Errorf("failed to read entry: %w", err)
 	}
 
 	// Bail if not found
@@ -190,7 +190,7 @@ func (init *Init) lookupInternal(ctx context.Context, id string, salted, tainted
 	// Unmarshal the token
 	entry := new(logical.TokenEntry)
 	if err := jsonutil.DecodeJSON(raw.Value, entry); err != nil {
-		return nil, fmt.Errorf("failed to decode entry: %v", err)
+		return nil, fmt.Errorf("failed to decode entry: %w", err)
 	}
 
 	// This is a token that is awaiting deferred revocation or tainted
@@ -250,7 +250,7 @@ func (init *Init) lookupInternal(ctx context.Context, id string, salted, tainted
 		// If fields are getting upgraded, store the changes
 		if persistNeeded {
 			if err := init.store(ctx, entry); err != nil {
-				return nil, fmt.Errorf("failed to persist token upgrade: %v", err)
+				return nil, fmt.Errorf("failed to persist token upgrade: %w", err)
 			}
 		}
 		return entry, nil
@@ -261,7 +261,7 @@ func (init *Init) lookupInternal(ctx context.Context, id string, salted, tainted
 	// If fields are getting upgraded, store the changes
 	if persistNeeded {
 		if err := init.store(ctx, entry); err != nil {
-			return nil, fmt.Errorf("failed to persist token upgrade: %v", err)
+			return nil, fmt.Errorf("failed to persist token upgrade: %w", err)
 		}
 	}
 
@@ -342,7 +342,7 @@ func (init *Init) storeCommon(ctx context.Context, entry *logical.TokenEntry, wr
 	// Marshal the entry
 	enc, err := json.Marshal(entry)
 	if err != nil {
-		return fmt.Errorf("failed to encode entry: %v", err)
+		return fmt.Errorf("failed to encode entry: %w", err)
 	}
 
 	if writeSecondary {
@@ -354,10 +354,10 @@ func (init *Init) storeCommon(ctx context.Context, entry *logical.TokenEntry, wr
 			// Ensure the parent exists
 			parent, err := init.Lookup(ctx, entry.Parent)
 			if err != nil {
-				return fmt.Errorf("failed to lookup parent: %v", err)
+				return fmt.Errorf("failed to lookup parent: %w", err)
 			}
 			if parent == nil {
-				return fmt.Errorf("parent token not found")
+				return errors.New("parent token not found")
 			}
 
 			parentNS, err := init.NamespaceByID(ctx, parent.NamespaceID)
@@ -383,7 +383,7 @@ func (init *Init) storeCommon(ctx context.Context, entry *logical.TokenEntry, wr
 
 			le := &logical.StorageEntry{Key: path}
 			if err := init.parentBarrierView.Put(ctx, le); err != nil {
-				return fmt.Errorf("failed to persist entry: %v", err)
+				return fmt.Errorf("failed to persist entry: %w", err)
 			}
 		}
 	}
@@ -394,14 +394,14 @@ func (init *Init) storeCommon(ctx context.Context, entry *logical.TokenEntry, wr
 		le.SealWrap = true
 	}
 	if err := init.idBarrierView.Put(ctx, le); err != nil {
-		return fmt.Errorf("failed to persist entry: %v", err)
+		return fmt.Errorf("failed to persist entry: %w", err)
 	}
 	return nil
 }
 
 func (init *Init) Lookup(ctx context.Context, id string) (*logical.TokenEntry, error) {
 	if id == "" {
-		return nil, fmt.Errorf("cannot lookup blank token")
+		return nil, errors.New("cannot lookup blank token")
 	}
 
 	// If it starts with "b." it's a batch token
