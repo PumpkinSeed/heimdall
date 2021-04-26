@@ -17,7 +17,7 @@ import (
 )
 
 func New(physical physical.Backend, access *vaultseal.Access) vault.Seal {
-	ret :=  seal{
+	ret := seal{
 		physical: physical,
 		access:   access,
 	}
@@ -27,9 +27,9 @@ func New(physical physical.Backend, access *vaultseal.Access) vault.Seal {
 
 // seal implements tha vault.Seal interface
 type seal struct {
-	physical physical.Backend
-	config atomic.Value
-	access *vaultseal.Access
+	physical   physical.Backend
+	config     atomic.Value
+	access     *vaultseal.Access
 	tokenStore *vault.TokenStore
 }
 
@@ -176,4 +176,3 @@ func NewSealAccess() *vaultseal.Access {
 		}),
 	}
 }
-

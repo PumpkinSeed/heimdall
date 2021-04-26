@@ -5,6 +5,9 @@ import (
 	"crypto/aes"
 	"crypto/rand"
 	"fmt"
+	"log"
+	"sync"
+
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	"github.com/PumpkinSeed/heimdall/pkg/seal"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
@@ -12,22 +15,20 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault"
-	"log"
-	"sync"
 )
 
 const TokenLength = 24
 
-
 type Request struct {
-	SecretShares      int      `json:"secret_shares"`
-	SecretThreshold   int      `json:"secret_threshold"`
+	SecretShares    int `json:"secret_shares"`
+	SecretThreshold int `json:"secret_threshold"`
 }
 
 type Result struct {
-	SecretShares   [][]byte
-	RootToken      string
+	SecretShares [][]byte
+	RootToken    string
 }
+
 var (
 	// shamirType is the type for the seal config
 	shamirType = "shamir"
@@ -50,11 +51,24 @@ var (
 
 	// rolesPrefix is the prefix used to store role information
 	rolesPrefix = "roles/"
-
 )
 
+type Init struct {
+	unseal *unseal.Unseal
+
+	salts               map[string]*salt.Salt
+	baseBarrierView     *vault.BarrierView
+	idBarrierView       *vault.BarrierView
+	accessorBarrierView *vault.BarrierView
+	parentBarrierView   *vault.BarrierView
+	rolesBarrierView    *vault.BarrierView
+
+	saltLock   sync.RWMutex
+	tokenLocks []*locksutil.LockEntry
+}
+
 func NewInit(unseal *unseal.Unseal) *Init {
-	view := vault.NewBarrierView(unseal.SecurityBarrier, "sys/"+ tokenSubPath)
+	view := vault.NewBarrierView(unseal.SecurityBarrier, "sys/"+tokenSubPath)
 
 	return &Init{
 		unseal:              unseal,
@@ -69,41 +83,27 @@ func NewInit(unseal *unseal.Unseal) *Init {
 	}
 }
 
-type Init struct {
-	unseal *unseal.Unseal
-
-	salts               map[string]*salt.Salt
-	baseBarrierView     *vault.BarrierView
-	idBarrierView       *vault.BarrierView
-	accessorBarrierView *vault.BarrierView
-	parentBarrierView   *vault.BarrierView
-	rolesBarrierView    *vault.BarrierView
-
-	saltLock sync.RWMutex
-	tokenLocks []*locksutil.LockEntry
-}
-
 func (init *Init) Initialize(ctx context.Context, req Request) (Result, error) {
 	seal := seal.New(init.unseal.Backend, seal.NewSealAccess())
 	if err := seal.Init(context.Background()); err != nil {
-		return Result{},err
+		return Result{}, err
 	}
 	barrierKey, _, err := generateShares(req)
 	if err != nil {
-		return Result{},err
+		return Result{}, err
 	}
 	sealKey, sealKeyShares, err := generateShares(req)
 	if err != nil {
-		return Result{},err
+		return Result{}, err
 	}
 	securityBarrier := unseal.Get().SecurityBarrier
-	err = securityBarrier.Initialize(context.Background(),barrierKey,sealKey,rand.Reader)
+	err = securityBarrier.Initialize(context.Background(), barrierKey, sealKey, rand.Reader)
 	if err != nil {
-		return Result{},err
+		return Result{}, err
 	}
 
-	if err := securityBarrier.Unseal(context.Background(),barrierKey); err != nil {
-		return Result{},err
+	if err := securityBarrier.Unseal(context.Background(), barrierKey); err != nil {
+		return Result{}, err
 	}
 
 	defer func(securityBarrier vault.SecurityBarrier) {
@@ -113,17 +113,16 @@ func (init *Init) Initialize(ctx context.Context, req Request) (Result, error) {
 		}
 	}(securityBarrier)
 
-	if err := seal.SetBarrierConfig(context.Background(),&vault.SealConfig{
-		Type:                 shamirType,
-		SecretShares:         req.SecretShares,
-		SecretThreshold:      req.SecretThreshold,
-
+	if err := seal.SetBarrierConfig(context.Background(), &vault.SealConfig{
+		Type:            shamirType,
+		SecretShares:    req.SecretShares,
+		SecretThreshold: req.SecretThreshold,
 	}); err != nil {
-		return Result{},err
+		return Result{}, err
 	}
 
-	if err := seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAESGCMKeyBytes(sealKey);err != nil {
-		return Result{},err
+	if err := seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAESGCMKeyBytes(sealKey); err != nil {
+		return Result{}, err
 	}
 	if err := seal.SetStoredKeys(ctx, [][]byte{barrierKey}); err != nil {
 		return Result{}, fmt.Errorf("failed to store keys: %v", err)
@@ -140,7 +139,7 @@ func (init *Init) Initialize(ctx context.Context, req Request) (Result, error) {
 
 	return Result{
 		SecretShares: sealKeyShares,
-		RootToken: rootToken.ID,
+		RootToken:    rootToken.ID,
 	}, nil
 }
 
@@ -150,7 +149,7 @@ func generateShares(req Request) ([]byte, [][]byte, error) {
 		return nil, nil, err
 	}
 
-	unSealKeys, err := shamir.Split(masterKey,req.SecretShares,req.SecretThreshold)
+	unSealKeys, err := shamir.Split(masterKey, req.SecretShares, req.SecretThreshold)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -158,7 +157,7 @@ func generateShares(req Request) ([]byte, [][]byte, error) {
 	return masterKey, unSealKeys, nil
 }
 
-func generateKey() ([]byte,error) {
+func generateKey() ([]byte, error) {
 	buf := make([]byte, 2*aes.BlockSize)
 	_, err := rand.Reader.Read(buf)
 

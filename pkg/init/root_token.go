@@ -6,6 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/base62"
@@ -14,8 +17,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
-	"strings"
-	"time"
 )
 
 const (
@@ -23,7 +24,7 @@ const (
 	rootTokenPolicy    = "root"
 )
 
-func (init *Init) getRootToken(ctx context.Context, ) (*logical.TokenEntry, error) {
+func (init *Init) getRootToken(ctx context.Context) (*logical.TokenEntry, error) {
 	ctx = namespace.ContextWithNamespace(ctx, namespace.RootNamespace)
 	te := &logical.TokenEntry{
 		Policies:     []string{rootTokenPolicy},
@@ -278,7 +279,6 @@ func (init *Init) lookupInternal(ctx context.Context, id string, salted, tainted
 	}
 
 	var ret *logical.TokenEntry
-
 
 	// If fields are getting upgraded, store the changes
 	if persistNeeded {

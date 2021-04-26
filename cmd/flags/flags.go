@@ -13,10 +13,10 @@ const (
 	NameConsulToken   = "consul-token"
 	NameInMemory      = "in-memory"
 
-	grpcDefaultAddr   = "0.0.0.0:9090"
-	restDefaultAddr   = "0.0.0.0:8080"
-	socketDefaultPath = "/tmp/heimdall.sock"
-	thresholdDefault  = 3
+	grpcDefaultAddr    = "0.0.0.0:9090"
+	restDefaultAddr    = "0.0.0.0:8080"
+	socketDefaultPath  = "/tmp/heimdall.sock"
+	thresholdDefault   = 3
 	totalSharesDefault = 5
 )
 
@@ -48,7 +48,7 @@ var (
 	}
 
 	TotalShares = &cli.IntFlag{
-		Name: NameTotalShares,
+		Name:  NameTotalShares,
 		Usage: "The shamir's total shares",
 		Value: totalSharesDefault,
 	}

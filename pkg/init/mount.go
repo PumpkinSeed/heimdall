@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
+
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -13,9 +14,8 @@ import (
 
 const (
 	mountTablePath = "mounts"
-	uuidLen = 16
+	uuidLen        = 16
 )
-
 
 func persistMounts(ctx context.Context) error {
 	uuid, _ := generateUUID()
@@ -23,23 +23,22 @@ func persistMounts(ctx context.Context) error {
 
 	// Create the mount entry
 	entry := &vault.MountEntry{
-		Table:                 "mounts", // mountTableType - the table it belongs to
-		Path:                  "transit/",//CorePath, // Mount Path
-		Type:                  "transit", // Logical backend type
+		Table:                 "mounts",   // mountTableType - the table it belongs to
+		Path:                  "transit/", //CorePath, // Mount Path
+		Type:                  "transit",  // Logical backend type
 		Description:           "",
 		Config:                vault.MountConfig{}, // Configuration related to this mount (but not backend-derived)
-		Local:                 false, // Local mounts are not replicated or affected by replication
-		SealWrap:              false, // Whether to wrap CSPs
-		ExternalEntropyAccess: false, // Whether to allow external entropy source access
+		Local:                 false,               // Local mounts are not replicated or affected by replication
+		SealWrap:              false,               // Whether to wrap CSPs
+		ExternalEntropyAccess: false,               // Whether to allow external entropy source access
 		Options:               map[string]string{}, // Backend options
 
-		UUID: uuid,
+		UUID:             uuid,
 		BackendAwareUUID: backendAwareUUID,
-		NamespaceID: "root",
+		NamespaceID:      "root",
 	}
 
-
-	accessor, err :=  generateMountAccessor(entry.Type)
+	accessor, err := generateMountAccessor(entry.Type)
 	if err != nil {
 		return err
 	}
@@ -49,7 +48,7 @@ func persistMounts(ctx context.Context) error {
 	entry.SyncCache()
 
 	nonLocalMounts := &vault.MountTable{
-		Type: mountTablePath,
+		Type:    mountTablePath,
 		Entries: []*vault.MountEntry{},
 	}
 	nonLocalMounts.Entries = append(nonLocalMounts.Entries, entry)

@@ -2,13 +2,14 @@ package init
 
 import (
 	"encoding/json"
+	"io"
+	"net"
+
 	"github.com/PumpkinSeed/heimdall/cmd/flags"
 	"github.com/PumpkinSeed/heimdall/internal/structs"
 	initcommand "github.com/PumpkinSeed/heimdall/pkg/init"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	"io"
-	"net"
 )
 
 var Cmd = &cli.Command{

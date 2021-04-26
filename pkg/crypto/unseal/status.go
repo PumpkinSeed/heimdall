@@ -36,4 +36,3 @@ func (s Status) String() string {
 
 	return sb.String()
 }
-

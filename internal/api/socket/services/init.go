@@ -3,12 +3,13 @@ package services
 import (
 	"context"
 	"encoding/json"
+
 	"github.com/PumpkinSeed/heimdall/internal/structs"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	initcommand "github.com/PumpkinSeed/heimdall/pkg/init"
 )
 
-type Init struct {}
+type Init struct{}
 
 func NewInit() Init {
 	return Init{}
@@ -16,7 +17,7 @@ func NewInit() Init {
 
 func (i Init) Handler(ctx context.Context, req structs.SocketRequest) (structs.SocketResponse, error) {
 	initParams := initcommand.Request{}
-	if err := json.Unmarshal(req.Data,&initParams); err != nil {
+	if err := json.Unmarshal(req.Data, &initParams); err != nil {
 		return structs.SocketResponse{}, err
 	}
 
