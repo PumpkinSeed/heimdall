@@ -25,6 +25,7 @@ func Serve(addr string) error {
 
 type server struct {
 	transit transit.Transit
+	structs.UnimplementedEncryptionServer
 }
 
 func newServer(b *unseal.Unseal) server {
