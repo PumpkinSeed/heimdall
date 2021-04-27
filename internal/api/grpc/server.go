@@ -25,6 +25,7 @@ func Serve(addr string) error {
 
 type server struct {
 	transit transit.Transit
+	structs.UnimplementedEncryptionServer
 }
 
 func newServer(b *unseal.Unseal) server {
@@ -148,6 +149,14 @@ func (s server) GenerateHMAC(ctx context.Context, req *structs.HMACRequest) (*st
 	return &structs.HMACResponse{
 		Result: hmac,
 	}, err
+}
+
+func (s server) Sign(ctx context.Context, req *structs.SignParameters) (*structs.SignResponse, error) {
+	return s.transit.Sign(ctx, req)
+}
+
+func (s server) VerifySigned(ctx context.Context, req *structs.VerificationRequest) (*structs.VerificationResponse, error) {
+	return s.transit.VerifySign(ctx, req)
 }
 
 func getStatus(err error) structs.Status {

@@ -1,3 +1,3 @@
 
 proto:
-	protoc --go_out=plugins=grpc:. pkg/structs/*.proto
+	protoc --go_out=. --go-grpc_out=. pkg/structs/*.proto
