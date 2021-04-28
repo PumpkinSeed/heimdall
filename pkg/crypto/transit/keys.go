@@ -4,9 +4,9 @@ import (
 	"context"
 	"crypto/rand"
 	"errors"
-	"github.com/PumpkinSeed/heimdall/pkg/structs"
 
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
+	"github.com/PumpkinSeed/heimdall/pkg/structs"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/sirupsen/logrus"
 )

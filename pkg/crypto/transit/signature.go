@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+
 	"github.com/PumpkinSeed/heimdall/pkg/structs"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 )

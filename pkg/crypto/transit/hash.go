@@ -9,10 +9,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/PumpkinSeed/heimdall/pkg/structs"
 	"hash"
 	"strconv"
 
+	"github.com/PumpkinSeed/heimdall/pkg/structs"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 )
 

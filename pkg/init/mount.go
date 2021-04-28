@@ -25,9 +25,9 @@ func persistMounts(ctx context.Context) error {
 
 	// Create the mount entry
 	entry := &vault.MountEntry{
-		Table:                 mountTablePath, // mountTableType - the table it belongs to
-		Path:                  defaultTransitPath,     //CorePath, // Mount Path
-		Type:                  logicalBackendType,      // Logical backend type
+		Table:                 mountTablePath,     // mountTableType - the table it belongs to
+		Path:                  defaultTransitPath, //CorePath, // Mount Path
+		Type:                  logicalBackendType, // Logical backend type
 		Description:           "",
 		Config:                vault.MountConfig{}, // Configuration related to this mount (but not backend-derived)
 		Local:                 false,               // Local mounts are not replicated or affected by replication
