@@ -40,7 +40,7 @@ func TestTransit(t *testing.T) {
 
 	const plainText = "ZWNyeXB0TWVJZllvdUNhbg==" // ecryptMeIfYouCan
 
-	encrypt, err := tr.Encrypt(ctx, keyName, BatchRequestItem{
+	encrypt, err := tr.Encrypt(ctx, keyName, "", BatchRequestItem{
 		Plaintext:  plainText,
 		KeyVersion: 0,
 	})
