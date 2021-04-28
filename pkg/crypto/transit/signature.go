@@ -13,7 +13,7 @@ import (
 
 func (t *Transit) Sign(ctx context.Context, req *structs.SignParameters) (*structs.SignResponse, error) {
 	p, _, err := t.lm.GetPolicy(ctx, keysutil.PolicyRequest{
-		Storage: t.u.Storage(),
+		Storage: t.u.Storage(req.EngineName),
 		Name:    req.KeyName,
 	}, rand.Reader)
 
@@ -70,7 +70,7 @@ func (t *Transit) Sign(ctx context.Context, req *structs.SignParameters) (*struc
 
 func (t *Transit) VerifySign(ctx context.Context, req *structs.VerificationRequest) (*structs.VerificationResponse, error) {
 	p, _, err := t.lm.GetPolicy(ctx, keysutil.PolicyRequest{
-		Storage: t.u.Storage(),
+		Storage: t.u.Storage(req.EngineName),
 		Name:    req.KeyName,
 	}, rand.Reader)
 

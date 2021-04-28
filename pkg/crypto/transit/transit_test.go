@@ -10,9 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var masterKey = []byte{189, 121, 77, 142, 213, 195, 183, 143, 119, 147, 168, 188, 242, 216, 180,
-	245, 110, 118, 183, 203, 72, 121, 94, 174, 222, 164, 209, 240, 156, 246, 22, 109}
-
 func TestTransit(t *testing.T) {
 	ctx := context.Background()
 	db, err := inmem.NewInmem(nil, nil)
@@ -23,9 +20,11 @@ func TestTransit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	u := &unseal.Unseal{}
+	u := unseal.Get()
 	u.SetSecurityBarrier(barrier)
-	u.SetMasterKey(masterKey)
+	if err := u.DevMode(ctx); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := u.PostProcess(ctx, []string{""}); err != nil {
 		t.Fatal(err)

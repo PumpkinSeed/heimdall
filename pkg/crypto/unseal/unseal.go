@@ -48,6 +48,7 @@ func Get() *Unseal {
 	if u == nil {
 		u = &Unseal{
 			TotalShares: defaultTotalShares,
+			storage:     make(map[string]logical.Storage),
 		}
 	}
 

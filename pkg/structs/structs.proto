@@ -123,6 +123,7 @@ message SignParameters {
     string context = 5;
     bool prehashed = 6;
     string signatureAlgorithm = 7;
+    string engineName = 8;
 }
 
 message SignResponse {
@@ -139,6 +140,7 @@ message VerificationRequest {
     string context = 6;
     bool prehashed = 7;
     string signatureAlgorithm = 8;
+    string engineName = 9;
 }
 
 message VerificationResponse {
