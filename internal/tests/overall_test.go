@@ -1,24 +1,31 @@
 package tests
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/PumpkinSeed/heimdall/cmd/flags"
-	"github.com/PumpkinSeed/heimdall/cmd/server"
-	"github.com/PumpkinSeed/heimdall/internal/socket"
-	"github.com/PumpkinSeed/heimdall/internal/structs"
-	initcommand "github.com/PumpkinSeed/heimdall/pkg/init"
-	"github.com/urfave/cli/v2"
 	"log"
 	"os"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/PumpkinSeed/heimdall/cmd/flags"
+	"github.com/PumpkinSeed/heimdall/cmd/server"
+	"github.com/PumpkinSeed/heimdall/internal/socket"
+	"github.com/PumpkinSeed/heimdall/internal/structs"
+	"github.com/PumpkinSeed/heimdall/pkg/client"
+	"github.com/PumpkinSeed/heimdall/pkg/client/grpc"
+	initcommand "github.com/PumpkinSeed/heimdall/pkg/init"
+	externalStructs "github.com/PumpkinSeed/heimdall/pkg/structs"
+	"github.com/urfave/cli/v2"
 )
 
+var force = true
+
 func TestEncrypt(t *testing.T) {
-	if runTest := os.Getenv("OVERALL"); runTest != "true" {
+	if runTest := os.Getenv("OVERALL"); force == false && runTest != "true" {
 		t.Skip("Don't run overall test at this time")
 	}
 	set := flag.NewFlagSet("server", 0)
@@ -32,14 +39,14 @@ func TestEncrypt(t *testing.T) {
 	ctx := cli.NewContext(nil, set, nil)
 
 	var done chan struct{}
-	go func (chan struct{}) {
+	go func(chan struct{}) {
 		if err := server.Cmd.Action(ctx); err != nil {
 			log.Print(err)
 		}
 		done <- struct{}{}
-	} (done)
+	}(done)
 
-	time.Sleep(3*time.Second)
+	time.Sleep(3 * time.Second)
 
 	initParams := initcommand.Request{
 		SecretShares:    ctx.Int(flags.NameTotalShares),
@@ -79,6 +86,54 @@ func TestEncrypt(t *testing.T) {
 		}
 	}
 
+	hc := client.New(grpc.Options{
+		TLS:  false,
+		URLs: []string{"127.0.0.1:9090"},
+	})
 
+	keyname := "test1234"
+	keyResp, err := hc.CreateKey(context.Background(), &externalStructs.Key{
+		Name: keyname,
+	})
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Println(keyResp)
+
+	plaintext := "test"
+	mes := time.Now()
+	encryptResult, err := hc.Encrypt(context.Background(), &externalStructs.EncryptRequest{
+		KeyName:   keyname,
+		PlainText: plaintext,
+	})
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Println("Encrypt time: " + time.Since(mes).String())
+
+	mes = time.Now()
+	decryptResult, err := hc.Decrypt(context.Background(), &externalStructs.DecryptRequest{
+		KeyName:    keyname,
+		Ciphertext: encryptResult.Result,
+	})
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Println("Decrypt time: " + time.Since(mes).String())
+	if decryptResult.Result != plaintext {
+		t.Errorf("Decrypted result should be %s, instead of %s", plaintext, decryptResult.Result)
+	}
+
+	mes = time.Now()
+	for i := 0; i < 100; i++ {
+		_, err = hc.Encrypt(context.Background(), &externalStructs.EncryptRequest{
+			KeyName:   keyname,
+			PlainText: plaintext,
+		})
+		if err != nil {
+			t.Error(err)
+		}
+	}
+	fmt.Println("Encrypt 100 time: " + time.Since(mes).String())
 	//<- done
 }
