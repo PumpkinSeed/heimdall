@@ -11,12 +11,16 @@ import (
 	initcommand "github.com/PumpkinSeed/heimdall/pkg/init"
 	"github.com/urfave/cli/v2"
 	"log"
+	"os"
 	"strings"
 	"testing"
 	"time"
 )
 
 func TestEncrypt(t *testing.T) {
+	if runTest := os.Getenv("OVERALL"); runTest != "true" {
+		t.Skip("Don't run overall test at this time")
+	}
 	set := flag.NewFlagSet("server", 0)
 	set.String(flags.NameConsulToken, "89C2B840-CDE0-4E77-ACAF-73EABB7A489B", "doc")
 	set.String(flags.NameConsulAddress, "127.0.0.1:8500", "doc")
