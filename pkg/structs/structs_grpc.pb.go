@@ -26,6 +26,8 @@ type EncryptionClient interface {
 	Decrypt(ctx context.Context, in *DecryptRequest, opts ...grpc.CallOption) (*CryptoResult, error)
 	Hash(ctx context.Context, in *HashRequest, opts ...grpc.CallOption) (*HashResponse, error)
 	GenerateHMAC(ctx context.Context, in *HMACRequest, opts ...grpc.CallOption) (*HMACResponse, error)
+	Sign(ctx context.Context, in *SignParameters, opts ...grpc.CallOption) (*SignResponse, error)
+	VerifySigned(ctx context.Context, in *VerificationRequest, opts ...grpc.CallOption) (*VerificationResponse, error)
 }
 
 type encryptionClient struct {
@@ -108,6 +110,24 @@ func (c *encryptionClient) GenerateHMAC(ctx context.Context, in *HMACRequest, op
 	return out, nil
 }
 
+func (c *encryptionClient) Sign(ctx context.Context, in *SignParameters, opts ...grpc.CallOption) (*SignResponse, error) {
+	out := new(SignResponse)
+	err := c.cc.Invoke(ctx, "/Encryption/Sign", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *encryptionClient) VerifySigned(ctx context.Context, in *VerificationRequest, opts ...grpc.CallOption) (*VerificationResponse, error) {
+	out := new(VerificationResponse)
+	err := c.cc.Invoke(ctx, "/Encryption/VerifySigned", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // EncryptionServer is the server API for Encryption service.
 // All implementations must embed UnimplementedEncryptionServer
 // for forward compatibility
@@ -120,6 +140,8 @@ type EncryptionServer interface {
 	Decrypt(context.Context, *DecryptRequest) (*CryptoResult, error)
 	Hash(context.Context, *HashRequest) (*HashResponse, error)
 	GenerateHMAC(context.Context, *HMACRequest) (*HMACResponse, error)
+	Sign(context.Context, *SignParameters) (*SignResponse, error)
+	VerifySigned(context.Context, *VerificationRequest) (*VerificationResponse, error)
 	mustEmbedUnimplementedEncryptionServer()
 }
 
@@ -150,6 +172,12 @@ func (UnimplementedEncryptionServer) Hash(context.Context, *HashRequest) (*HashR
 }
 func (UnimplementedEncryptionServer) GenerateHMAC(context.Context, *HMACRequest) (*HMACResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GenerateHMAC not implemented")
+}
+func (UnimplementedEncryptionServer) Sign(context.Context, *SignParameters) (*SignResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Sign not implemented")
+}
+func (UnimplementedEncryptionServer) VerifySigned(context.Context, *VerificationRequest) (*VerificationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method VerifySigned not implemented")
 }
 func (UnimplementedEncryptionServer) mustEmbedUnimplementedEncryptionServer() {}
 
@@ -308,6 +336,42 @@ func _Encryption_GenerateHMAC_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Encryption_Sign_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SignParameters)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EncryptionServer).Sign(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Encryption/Sign",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EncryptionServer).Sign(ctx, req.(*SignParameters))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Encryption_VerifySigned_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VerificationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EncryptionServer).VerifySigned(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Encryption/VerifySigned",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EncryptionServer).VerifySigned(ctx, req.(*VerificationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Encryption_ServiceDesc is the grpc.ServiceDesc for Encryption service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -346,6 +410,14 @@ var Encryption_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GenerateHMAC",
 			Handler:    _Encryption_GenerateHMAC_Handler,
+		},
+		{
+			MethodName: "Sign",
+			Handler:    _Encryption_Sign_Handler,
+		},
+		{
+			MethodName: "VerifySigned",
+			Handler:    _Encryption_VerifySigned_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
