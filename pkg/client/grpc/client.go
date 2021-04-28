@@ -101,3 +101,10 @@ func (c proxyClient) Hash(ctx context.Context, hash *structs.HashRequest) (*stru
 func (c proxyClient) GenerateHMAC(ctx context.Context, hmac *structs.HMACRequest) (*structs.HMACResponse, error) {
 	return c.next().GenerateHMAC(ctx, hmac)
 }
+
+func (c proxyClient) Sign(ctx context.Context, in *structs.SignParameters) (*structs.SignResponse, error) {
+	return c.next().Sign(ctx, in)
+}
+func (c proxyClient) VerifySigned(ctx context.Context, in *structs.VerificationRequest) (*structs.VerificationResponse, error) {
+	return c.next().VerifySigned(ctx, in)
+}

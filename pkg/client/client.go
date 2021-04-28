@@ -23,4 +23,6 @@ type Client interface {
 	Decrypt(ctx context.Context, decrypt *structs.DecryptRequest) (*structs.CryptoResult, error)
 	Hash(ctx context.Context, hash *structs.HashRequest) (*structs.HashResponse, error)
 	GenerateHMAC(ctx context.Context, hmac *structs.HMACRequest) (*structs.HMACResponse, error)
+	Sign(ctx context.Context, in *structs.SignParameters) (*structs.SignResponse, error)
+	VerifySigned(ctx context.Context, in *structs.VerificationRequest) (*structs.VerificationResponse, error)
 }
