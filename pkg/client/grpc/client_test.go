@@ -11,10 +11,7 @@ import (
 
 func TestClient(t *testing.T) {
 	t.Skip("Skip integration test")
-	client, err := Client("127.0.0.1:9090", Options{})
-	if err != nil {
-		t.Fatal(err)
-	}
+	client := Options{URLs: []string{"127.0.0.1:9090"}}.Setup()
 	ctx := context.Background()
 	key, err := client.CreateKey(ctx, &structs.Key{
 		Name: fmt.Sprintf("some_key_%d", time.Now().UTC().UnixNano()),
@@ -24,7 +21,7 @@ func TestClient(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Logf("Key: %+v", key)
-	keys, err := client.ListKeys(ctx, &structs.Empty{})
+	keys, err := client.ListKeys(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,10 +51,7 @@ func TestClient(t *testing.T) {
 func TestHash(t *testing.T) {
 	t.Skip("Skip integration test")
 
-	client, err := Client("127.0.0.1:9090", Options{})
-	if err != nil {
-		t.Fatal(err)
-	}
+	client := Options{URLs: []string{"127.0.0.1:9090"}}.Setup()
 	ctx := context.Background()
 	res, err := client.Hash(ctx, &structs.HashRequest{
 		Algorithm: structs.HashType_HashTypeSHA2256,
@@ -73,10 +67,7 @@ func TestHash(t *testing.T) {
 func TestSignature(t *testing.T) {
 	t.Skip("Skip integration test")
 
-	client, err := Client("127.0.0.1:9090", Options{})
-	if err != nil {
-		t.Fatal(err)
-	}
+	client := Options{URLs: []string{"127.0.0.1:9090"}}.Setup()
 	ctx := context.Background()
 	key, err := client.CreateKey(ctx, &structs.Key{
 		Name: fmt.Sprintf("some_key_%d", time.Now().UTC().UnixNano()),
