@@ -45,6 +45,23 @@ message KeyListResponse {
 enum EncryptionType {
     AES256_GCM96 = 0;
     CHACHA20_POLY1305 = 1;
+    ECDSA_P256 = 3;
+    ED25519 = 4;
+    RSA2048 = 5;
+    RSA4096 = 6;
+    ECDSA_P384 = 7;
+    ECDSA_P521 = 8;
+    AES128_GCM96 = 9;
+    RSA3072 = 10;
+}
+
+enum HashType {
+    EmptyHashType = 0;
+    HashTypeSHA1 = 1;
+    HashTypeSHA2224 = 2;
+    HashTypeSHA2256 = 3;
+    HashTypeSHA2384 = 4;
+    HashTypeSHA2512 = 5;
 }
 
 enum Status {
@@ -95,7 +112,7 @@ message HMACResponse {
 message SignParameters {
     string keyName = 1;
     int64 keyVersion = 2;
-    string hashAlgorithm = 3;
+    HashType hashAlgorithm = 3;
     string input = 4;
     string context = 5;
     bool prehashed = 6;
@@ -104,11 +121,12 @@ message SignParameters {
 
 message SignResponse {
     string result = 1;
+    string pubKey = 2;
 }
 
 message VerificationRequest {
     string keyName = 1;
-    string hashAlgorithm = 2;
+    HashType hashAlgorithm = 2;
     string input = 3;
     string signature = 4;
     string hmac = 5;
