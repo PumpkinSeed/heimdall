@@ -151,6 +151,22 @@ func (s server) GenerateHMAC(ctx context.Context, req *structs.HMACRequest) (*st
 	}, err
 }
 
+func (s server) Sign(ctx context.Context, req *structs.SignParameters) (*structs.SignResponse, error) {
+	signature, err := s.transit.Sign(ctx, req)
+	if err != nil {
+		log.Errorf("Error generating sign: %v", err)
+	}
+	return signature, err
+}
+
+func (s server) VerifySigned(ctx context.Context, req *structs.VerificationRequest) (*structs.VerificationResponse, error) {
+	verificationResult, err := s.transit.VerifySign(ctx, req)
+	if err != nil {
+		log.Errorf("Error validating signature %v", err)
+	}
+	return verificationResult, err
+}
+
 func getStatus(err error) structs.Status {
 	if err != nil {
 		return structs.Status_ERROR
