@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"github.com/PumpkinSeed/heimdall/pkg/crypto/utils"
 	"net"
 
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/transit"
@@ -41,8 +42,8 @@ func (s server) CreateKey(ctx context.Context, key *structs.Key) (*structs.KeyRe
 	}
 
 	return &structs.KeyResponse{
-		Status:  getStatus(err),
-		Message: getMessage(err),
+		Status:  utils.GetStatus(err),
+		Message: utils.GetMessage(err),
 		Key:     key,
 	}, nil
 }
@@ -54,8 +55,8 @@ func (s server) ReadKey(ctx context.Context, key *structs.KeyName) (*structs.Key
 	}
 
 	return &structs.KeyResponse{
-		Status:  getStatus(err),
-		Message: getMessage(err),
+		Status:  utils.GetStatus(err),
+		Message: utils.GetMessage(err),
 		Key: &structs.Key{
 			Name: k.Name,
 			Type: structs.EncryptionType(structs.EncryptionType_value[k.Type.String()]),
@@ -70,8 +71,8 @@ func (s server) DeleteKey(ctx context.Context, key *structs.KeyName) (*structs.K
 	}
 
 	return &structs.KeyResponse{
-		Status:  getStatus(err),
-		Message: getMessage(err),
+		Status:  utils.GetStatus(err),
+		Message: utils.GetMessage(err),
 		Key: &structs.Key{
 			Name: key.Name,
 		},
@@ -93,8 +94,8 @@ func (s server) ListKeys(ctx context.Context, _ *structs.Empty) (*structs.KeyLis
 	}
 
 	return &structs.KeyListResponse{
-		Status:  getStatus(err),
-		Message: getMessage(err),
+		Status:  utils.GetStatus(err),
+		Message: utils.GetMessage(err),
 		Keys:    keySlice,
 	}, err
 }
@@ -151,18 +152,18 @@ func (s server) GenerateHMAC(ctx context.Context, req *structs.HMACRequest) (*st
 	}, err
 }
 
-func getStatus(err error) structs.Status {
+func (s server) Sign(ctx context.Context, req *structs.SignParameters) (*structs.SignResponse, error) {
+	signature, err := s.transit.Sign(ctx, req)
 	if err != nil {
-		return structs.Status_ERROR
+		log.Errorf("Error generating sign: %v", err)
 	}
-
-	return structs.Status_SUCCESS
+	return signature, err
 }
 
-func getMessage(err error) string {
+func (s server) VerifySigned(ctx context.Context, req *structs.VerificationRequest) (*structs.VerificationResponse, error) {
+	verificationResult, err := s.transit.VerifySign(ctx, req)
 	if err != nil {
-		return err.Error()
+		log.Errorf("Error validating signature %v", err)
 	}
-
-	return "ok"
+	return verificationResult, err
 }
