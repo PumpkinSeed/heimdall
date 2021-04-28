@@ -1,4 +1,7 @@
+// +build integration
+
 package client_example
+
 
 import (
 	"context"
