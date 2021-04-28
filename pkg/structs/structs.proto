@@ -89,7 +89,7 @@ message CryptoResult {
 }
 
 message HashRequest {
-    string algorithm = 1;
+    HashType algorithm = 1;
     string input = 2;
     string format = 3;
 }
