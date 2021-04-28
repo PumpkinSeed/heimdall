@@ -1,55 +1,38 @@
 package rest
 
-// transit/encrypt/key
-// {engineName}/encrypt/{keyName} // storageban
-// gochi kell
 import (
+	"context"
 	"encoding/json"
-	"github.com/PumpkinSeed/heimdall/pkg/crypto/utils"
 	"io/ioutil"
 	"net/http"
 	"strings"
 
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/transit"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
+	"github.com/PumpkinSeed/heimdall/pkg/crypto/utils"
 	"github.com/PumpkinSeed/heimdall/pkg/structs"
 	"github.com/go-chi/chi/v5"
 	log "github.com/sirupsen/logrus"
 )
 
-//type EncryptionServer interface {
-//	CreateKey(w http.ResponseWriter, r *http.Request)
-//	ReadKey(w http.ResponseWriter, r *http.Request)
-//	DeleteKey(w http.ResponseWriter, r *http.Request)
-//	ListKeys(w http.ResponseWriter, r *http.Request)
-//	Encrypt(w http.ResponseWriter, r *http.Request)
-//	Decrypt(w http.ResponseWriter, r *http.Request)
-//	Hash(w http.ResponseWriter, r *http.Request)
-//	GenerateHMAC(w http.ResponseWriter, r *http.Request)
-//	Sign(w http.ResponseWriter, r *http.Request)
-//	VerifySigned(w http.ResponseWriter, r *http.Request)
-//
-//	initRoutes()
-//	middleware()
-//	ServeHTTP(w http.ResponseWriter, r *http.Request)
-//}
+const engine = "engine"
 
 func Serve(addr string) error {
 	s := newServer(unseal.Get())
-	s.router.Use(s.checkSecretEngineExists)
-	s.initRoutes()
+	s.Use(s.checkSecretEngineExists)
+	s.Init()
 	log.Infof("HTTP server listening on %s", addr)
 	return http.ListenAndServe(addr, s)
 }
 
 type server struct {
-	router  *chi.Mux
+	*chi.Mux
 	transit transit.Transit
 }
 
-func newServer(b *unseal.Unseal) server {
-	return server{
-		router:  chi.NewRouter(),
+func newServer(b *unseal.Unseal) EncryptionServer {
+	return &server{
+		Mux:     chi.NewRouter(),
 		transit: transit.New(b),
 	}
 }
@@ -57,18 +40,26 @@ func newServer(b *unseal.Unseal) server {
 func (s server) checkSecretEngineExists(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		engineName := strings.SplitN(strings.TrimPrefix(r.RequestURI, "/"), "/", 2)[0]
+		// TODO check if secret engine exists
 		log.Printf("engine used: %s", engineName)
+		context.WithValue(r.Context(), engine, engineName)
 
 		next.ServeHTTP(w, r)
 	})
 }
 
-func (s *server) initRoutes() {
-	s.router.Post("/{engineName:^[0-9a-v]+$}/key", s.CreateKey)
-}
+func (s *server) Init() {
+	s.Post("/{engineName:^[0-9a-v]+$}/key", s.CreateKey)
+	s.Get("/{engineName:^[0-9a-v]+$}/key", s.ListKeys)
+	s.Get("/{engineName:^[0-9a-v]+$}/key/{key}", s.ReadKey)
+	s.Delete("/{engineName:^[0-9a-v]+$}/key/{key}", s.DeleteKey)
 
-func (s server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	s.router.ServeHTTP(w, r)
+	s.Post("/{engineName:^[0-9a-v]+$}/encrypt", s.Encrypt)
+	s.Post("/{engineName:^[0-9a-v]+$}/decrypt", s.Decrypt)
+	s.Post("/{engineName:^[0-9a-v]+$}/hash", s.Hash)
+	s.Post("/{engineName:^[0-9a-v]+$}/hmac", s.GenerateHMAC)
+	s.Post("/{engineName:^[0-9a-v]+$}/sign", s.Sign)
+	s.Post("/{engineName:^[0-9a-v]+$}/verify", s.VerifySigned)
 }
 
 func (s server) CreateKey(w http.ResponseWriter, r *http.Request) {
@@ -93,14 +84,12 @@ func (s server) CreateKey(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s server) ReadKey(w http.ResponseWriter, r *http.Request) {
-	var keyName structs.KeyName
-	if err := bind(r, &keyName); err != nil {
-		log.Error(err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	key := chi.URLParam(r, "key")
+	if key == "" {
+		http.Error(w, "key not found", http.StatusBadRequest)
 		return
 	}
-
-	k, err := s.transit.GetKey(r.Context(), keyName.Name)
+	k, err := s.transit.GetKey(r.Context(), key)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -116,16 +105,15 @@ func (s server) ReadKey(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s server) DeleteKey(w http.ResponseWriter, r *http.Request) {
-	var key structs.Key
-	if err := bind(r, &key); err != nil {
-		log.Error(err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	key := chi.URLParam(r, "key")
+	if key == "" {
+		http.Error(w, "key not found", http.StatusBadRequest)
 		return
 	}
 
-	err := s.transit.DeleteKey(r.Context(), key.Name)
+	err := s.transit.DeleteKey(r.Context(), key)
 	if err != nil {
-		log.Errorf("Error with key deletion [%s]: %v", key.Name, err)
+		log.Errorf("Error with key deletion [%s]: %v", key, err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -134,7 +122,7 @@ func (s server) DeleteKey(w http.ResponseWriter, r *http.Request) {
 		Status:  utils.GetStatus(err),
 		Message: utils.GetMessage(err),
 		Key: &structs.Key{
-			Name: key.Name,
+			Name: key,
 		},
 	})
 }
@@ -307,4 +295,22 @@ func successResponse(w http.ResponseWriter, v interface{}) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
+}
+
+type EncryptionServer interface {
+	chi.Router
+
+	CreateKey(w http.ResponseWriter, r *http.Request)
+	ReadKey(w http.ResponseWriter, r *http.Request)
+	DeleteKey(w http.ResponseWriter, r *http.Request)
+	ListKeys(w http.ResponseWriter, r *http.Request)
+	Encrypt(w http.ResponseWriter, r *http.Request)
+	Decrypt(w http.ResponseWriter, r *http.Request)
+	Hash(w http.ResponseWriter, r *http.Request)
+	GenerateHMAC(w http.ResponseWriter, r *http.Request)
+	Sign(w http.ResponseWriter, r *http.Request)
+	VerifySigned(w http.ResponseWriter, r *http.Request)
+
+	Init()
+	checkSecretEngineExists(next http.Handler) http.Handler
 }
