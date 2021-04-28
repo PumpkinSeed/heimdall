@@ -100,7 +100,7 @@ func (u *Unseal) Keyring(ctx context.Context) error {
 }
 
 // Mount is mounting transit, getting the MountTable from database and decrypt it
-func (u *Unseal) Mount(ctx context.Context) ([]string, error) {
+func (u *Unseal) Mount(ctx context.Context) (map[string]string, error) {
 	if u.masterKey == nil {
 		return nil, errors.New("server is still sealed, unseal it before do anything")
 	}
@@ -113,10 +113,10 @@ func (u *Unseal) Mount(ctx context.Context) ([]string, error) {
 		return nil, err
 	}
 
-	var res []string
+	res := make(map[string]string)
 	for _, e := range table.Entries {
 		if strings.EqualFold(e.Type, "transit") {
-			res = append(res, e.ViewPath())
+			res[e.Path] = e.ViewPath()
 		}
 	}
 
@@ -145,7 +145,7 @@ func (u *Unseal) DevMode(ctx context.Context) error {
 	}
 	u.SetMasterKey(masterKey)
 	u.SetDefaultEnginePath("")
-	return u.PostProcess(ctx, []string{""})
+	return u.PostProcess(ctx, map[string]string{"transit/":"logical/00000000-0000-0000-0000-000000000000"})
 }
 
 func (u *Unseal) unseal(ctx context.Context) error {
@@ -185,7 +185,7 @@ func (u *Unseal) unseal(ctx context.Context) error {
 	return nil
 }
 
-func (u *Unseal) PostProcess(ctx context.Context, barrierPaths []string) error {
+func (u *Unseal) PostProcess(ctx context.Context, barrierPaths map[string]string) error {
 	// TODO check seal key passing
 	if err := u.SecurityBarrier.Initialize(ctx, u.masterKey, []byte{}, rand.Reader); err != nil && !errors.Is(err, vault.ErrBarrierAlreadyInit) {
 		return err
@@ -195,8 +195,8 @@ func (u *Unseal) PostProcess(ctx context.Context, barrierPaths []string) error {
 		return err
 	}
 
-	for _, p := range barrierPaths {
-		u.storage[p] = vault.NewBarrierView(u.SecurityBarrier, p)
+	for p, bp := range barrierPaths {
+		u.storage[p] = vault.NewBarrierView(u.SecurityBarrier, bp)
 	}
 	return nil
 }

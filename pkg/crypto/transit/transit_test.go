@@ -26,20 +26,16 @@ func TestTransit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := u.PostProcess(ctx, []string{""}); err != nil {
-		t.Fatal(err)
-	}
-
 	tr := New(u)
 
 	const keyName = "testkey"
-	if err := tr.CreateKey(ctx, keyName, "", ""); err != nil {
+	if err := tr.CreateKey(ctx, keyName, "", "transit/"); err != nil {
 		t.Fatal(err)
 	}
 
 	const plainText = "ZWNyeXB0TWVJZllvdUNhbg==" // ecryptMeIfYouCan
 
-	encrypt, err := tr.Encrypt(ctx, keyName, "", BatchRequestItem{
+	encrypt, err := tr.Encrypt(ctx, keyName, "transit/", BatchRequestItem{
 		Plaintext:  plainText,
 		KeyVersion: 0,
 	})
@@ -49,7 +45,7 @@ func TestTransit(t *testing.T) {
 
 	assert.NotEmpty(t, encrypt.Ciphertext)
 
-	decrypt, err := tr.Decrypt(ctx, keyName, "", BatchRequestItem{
+	decrypt, err := tr.Decrypt(ctx, keyName, "transit/", BatchRequestItem{
 		Ciphertext: encrypt.Ciphertext,
 		KeyVersion: encrypt.KeyVersion,
 	})
