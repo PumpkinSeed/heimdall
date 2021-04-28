@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
+	"github.com/PumpkinSeed/heimdall/pkg/structs"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/sirupsen/logrus"
 )
@@ -75,28 +76,8 @@ func (t Transit) DeleteKey(ctx context.Context, name string) error {
 }
 
 func getKeyType(typ string) keysutil.KeyType {
-	switch typ {
-	case "aes128-gcm96":
-		return keysutil.KeyType_AES128_GCM96
-	case "aes256-gcm96":
-		return keysutil.KeyType_AES256_GCM96
-	case "chacha20-poly1305":
-		return keysutil.KeyType_ChaCha20_Poly1305
-	case "ecdsa-p256":
-		return keysutil.KeyType_ECDSA_P256
-	case "ecdsa-p384":
-		return keysutil.KeyType_ECDSA_P384
-	case "ecdsa-p521":
-		return keysutil.KeyType_ECDSA_P521
-	case "ed25519":
-		return keysutil.KeyType_ED25519
-	case "rsa-2048":
-		return keysutil.KeyType_RSA2048
-	case "rsa-3072":
-		return keysutil.KeyType_RSA3072
-	case "rsa-4096":
-		return keysutil.KeyType_RSA4096
-	default:
-		return keysutil.KeyType_AES256_GCM96
+	if v, ok := structs.EncryptionType_value[typ]; ok {
+		return keysutil.KeyType(v)
 	}
+	return keysutil.KeyType_AES256_GCM96
 }

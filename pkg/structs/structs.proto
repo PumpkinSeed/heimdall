@@ -13,6 +13,9 @@ service Encryption {
 
     rpc Hash (HashRequest) returns (HashResponse);
     rpc GenerateHMAC (HMACRequest) returns (HMACResponse);
+
+    rpc Sign (SignParameters) returns (SignResponse);
+    rpc VerifySigned (VerificationRequest) returns (VerificationResponse);
 }
 
 message Empty {
@@ -42,6 +45,23 @@ message KeyListResponse {
 enum EncryptionType {
     AES256_GCM96 = 0;
     CHACHA20_POLY1305 = 1;
+    ECDSA_P256 = 3;
+    ED25519 = 4;
+    RSA2048 = 5;
+    RSA4096 = 6;
+    ECDSA_P384 = 7;
+    ECDSA_P521 = 8;
+    AES128_GCM96 = 9;
+    RSA3072 = 10;
+}
+
+enum HashType {
+    EmptyHashType = 0;
+    HashTypeSHA1 = 1;
+    HashTypeSHA2224 = 2;
+    HashTypeSHA2256 = 3;
+    HashTypeSHA2384 = 4;
+    HashTypeSHA2512 = 5;
 }
 
 enum Status {
@@ -69,7 +89,7 @@ message CryptoResult {
 }
 
 message HashRequest {
-    string algorithm = 1;
+    HashType algorithm = 1;
     string input = 2;
     string format = 3;
 }
@@ -87,4 +107,34 @@ message HMACRequest {
 
 message HMACResponse {
     string result = 1;
+}
+
+message SignParameters {
+    string keyName = 1;
+    int64 keyVersion = 2;
+    HashType hashAlgorithm = 3;
+    string input = 4;
+    string context = 5;
+    bool prehashed = 6;
+    string signatureAlgorithm = 7;
+}
+
+message SignResponse {
+    string result = 1;
+    string pubKey = 2;
+}
+
+message VerificationRequest {
+    string keyName = 1;
+    HashType hashAlgorithm = 2;
+    string input = 3;
+    string signature = 4;
+    string hmac = 5;
+    string context = 6;
+    bool prehashed = 7;
+    string signatureAlgorithm = 8;
+}
+
+message VerificationResponse {
+    bool verificationResult = 1;
 }

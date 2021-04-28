@@ -47,3 +47,65 @@ func TestClient(t *testing.T) {
 	}
 	t.Logf("Decrypted: %s", decrypt.Result)
 }
+
+func TestHash(t *testing.T) {
+	t.Skip("Skip integration test")
+
+	client, err := Client("127.0.0.1:9090", Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	res, err := client.Hash(ctx, &structs.HashRequest{
+		Algorithm: structs.HashType_HashTypeSHA2256,
+		Input:     "ecryptMeIfYouCan",
+		Format:    "base64",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(res)
+}
+
+func TestSignature(t *testing.T) {
+	t.Skip("Skip integration test")
+
+	client, err := Client("127.0.0.1:9090", Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	key, err := client.CreateKey(ctx, &structs.Key{
+		Name: fmt.Sprintf("some_key_%d", time.Now().UTC().UnixNano()),
+		Type: structs.EncryptionType_ED25519,
+	})
+
+	const plainText = "GXWuoNZ5i3aZHsd6GwSeyjeQWD+Qjig3+VN3DDr25iw=" // ecryptMeIfYouCan
+	signRes, err := client.Sign(ctx, &structs.SignParameters{
+		KeyName:            key.Key.Name,
+		KeyVersion:         1,
+		HashAlgorithm:      structs.HashType_HashTypeSHA2256,
+		Input:              plainText,
+		Context:            "",
+		Prehashed:          false,
+		SignatureAlgorithm: "",
+	})
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Println(signRes)
+
+	verificationResp, err := client.VerifySigned(ctx, &structs.VerificationRequest{
+		KeyName:            key.Key.Name,
+		HashAlgorithm:      structs.HashType_HashTypeSHA2256,
+		Input:              plainText,
+		Signature:          signRes.Result,
+		Context:            "",
+		Prehashed:          false,
+		SignatureAlgorithm: "",
+	})
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Println(verificationResp)
+}
