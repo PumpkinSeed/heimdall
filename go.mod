@@ -3,9 +3,10 @@ module github.com/PumpkinSeed/heimdall
 go 1.16
 
 require (
-	github.com/golang/protobuf v1.5.1 // indirect
+	github.com/golang/protobuf v1.5.1
 	github.com/hashicorp/go-hclog v0.15.0
 	github.com/hashicorp/go-kms-wrapping v0.5.16
+	github.com/hashicorp/go-uuid v1.0.2
 	github.com/hashicorp/vault v1.7.0
 	github.com/hashicorp/vault/sdk v0.1.14-0.20210322210658-b52b8b8c1264
 	github.com/sirupsen/logrus v1.8.1
@@ -15,6 +16,5 @@ require (
 	golang.org/x/sys v0.0.0-20210319071255-635bc2c9138d // indirect
 	google.golang.org/genproto v0.0.0-20210319143718-93e7006c17a6 // indirect
 	google.golang.org/grpc v1.36.0
-	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0 // indirect
 	google.golang.org/protobuf v1.26.0
 )
