@@ -1,12 +1,17 @@
 package tests
 
 import (
+	"encoding/json"
 	"flag"
+	"fmt"
 	"github.com/PumpkinSeed/heimdall/cmd/flags"
-	initcommand "github.com/PumpkinSeed/heimdall/cmd/init"
 	"github.com/PumpkinSeed/heimdall/cmd/server"
+	"github.com/PumpkinSeed/heimdall/internal/socket"
+	"github.com/PumpkinSeed/heimdall/internal/structs"
+	initcommand "github.com/PumpkinSeed/heimdall/pkg/init"
 	"github.com/urfave/cli/v2"
 	"log"
+	"strings"
 	"testing"
 	"time"
 )
@@ -30,11 +35,46 @@ func TestEncrypt(t *testing.T) {
 		done <- struct{}{}
 	} (done)
 
-	time.Sleep(10*time.Second)
+	time.Sleep(3*time.Second)
 
-	if err := initcommand.Cmd.Action(ctx); err != nil {
-		log.Print(err)
+	initParams := initcommand.Request{
+		SecretShares:    ctx.Int(flags.NameTotalShares),
+		SecretThreshold: ctx.Int(flags.NameThreshold),
 	}
 
-	<- done
+	data, err := json.Marshal(initParams)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := socket.Do(ctx, structs.SocketRequest{
+		Type: structs.SocketInit,
+		Data: data,
+	})
+
+	fmt.Println(string(resp))
+	type Result struct {
+		SecretShares []string
+		RootToken    string
+	}
+	var initResult Result
+	if err := json.Unmarshal(resp, &initResult); err != nil {
+		t.Error(err)
+	}
+
+	for _, key := range initResult.SecretShares {
+		unsealResult, err := socket.Do(ctx, structs.SocketRequest{
+			Type: structs.SocketUnseal,
+			Data: []byte(key),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(string(unsealResult), "Unsealed: true") {
+			break
+		}
+	}
+
+
+	//<- done
 }
