@@ -10,13 +10,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func (t Transit) CreateKey(ctx context.Context, name, keyType string) error {
+func (t Transit) CreateKey(ctx context.Context, name, keyType, engineName string) error {
 	if !t.u.Status().Unsealed {
 		return unseal.ErrSealed
 	}
 	polReq := keysutil.PolicyRequest{
 		Upsert:               true,
-		Storage:              t.u.Storage(),
+		Storage:              t.u.Storage(engineName),
 		Name:                 name,
 		Derived:              false,
 		Convergent:           false,
@@ -40,12 +40,12 @@ func (t Transit) CreateKey(ctx context.Context, name, keyType string) error {
 	return nil
 }
 
-func (t Transit) GetKey(ctx context.Context, name string) (*keysutil.Policy, error) {
+func (t Transit) GetKey(ctx context.Context, name, engineName string) (*keysutil.Policy, error) {
 	if !t.u.Status().Unsealed {
 		return nil, unseal.ErrSealed
 	}
 	p, _, err := t.lm.GetPolicy(ctx, keysutil.PolicyRequest{
-		Storage: t.u.Storage(),
+		Storage: t.u.Storage(engineName),
 		Name:    name,
 	}, rand.Reader)
 	if err != nil {
@@ -60,18 +60,18 @@ func (t Transit) GetKey(ctx context.Context, name string) (*keysutil.Policy, err
 	return p, nil
 }
 
-func (t Transit) ListKeys(ctx context.Context) ([]string, error) {
+func (t Transit) ListKeys(ctx context.Context, engineName string) ([]string, error) {
 	if !t.u.Status().Unsealed {
 		return nil, unseal.ErrSealed
 	}
-	return t.u.Storage().List(ctx, "policy/")
+	return t.u.Storage(engineName).List(ctx, "policy/")
 }
 
-func (t Transit) DeleteKey(ctx context.Context, name string) error {
+func (t Transit) DeleteKey(ctx context.Context, name, engineName string) error {
 	if !t.u.Status().Unsealed {
 		return unseal.ErrSealed
 	}
-	return t.lm.DeletePolicy(ctx, t.u.Storage(), name)
+	return t.lm.DeletePolicy(ctx, t.u.Storage(engineName), name)
 }
 
 func getKeyType(typ string) keysutil.KeyType {

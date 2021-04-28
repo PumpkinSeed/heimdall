@@ -16,15 +16,18 @@ service Encryption {
 }
 
 message Empty {
+    string engineName = 1;
 }
 
 message KeyName {
     string name = 1;
+    string engineName = 2;
 }
 
 message Key {
     string name = 1;
     EncryptionType type = 2;
+    string engineName = 3;
 }
 
 message KeyResponse {
@@ -55,6 +58,7 @@ message EncryptRequest {
     string plainText = 2;
     string nonce = 3;
     int64 keyVersion = 4;
+    string engineName = 5;
 }
 
 message DecryptRequest {
@@ -62,6 +66,7 @@ message DecryptRequest {
     string ciphertext = 2;
     string nonce = 3;
     int64 keyVersion = 4;
+    string engineName = 5;
 }
 
 message CryptoResult {
@@ -83,6 +88,7 @@ message HMACRequest {
     int64 keyVersion = 2;
     string algorithm = 3;
     string input = 4;
+    string engineName = 5;
 }
 
 message HMACResponse {

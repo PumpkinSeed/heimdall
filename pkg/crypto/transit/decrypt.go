@@ -7,7 +7,7 @@ import (
 	"fmt"
 )
 
-func (t Transit) Decrypt(ctx context.Context, key string, req BatchRequestItem) (DecryptBatchResponseItem, error) {
+func (t Transit) Decrypt(ctx context.Context, key, engineName string, req BatchRequestItem) (DecryptBatchResponseItem, error) {
 	if req.Ciphertext == "" {
 		return DecryptBatchResponseItem{}, errors.New("missing ciphertext to decrypt")
 	}
@@ -29,7 +29,7 @@ func (t Transit) Decrypt(ctx context.Context, key string, req BatchRequestItem) 
 		}
 	}
 
-	p, err := t.GetKey(ctx, key)
+	p, err := t.GetKey(ctx, key, engineName)
 	if err != nil {
 		return DecryptBatchResponseItem{}, err
 	}

@@ -27,14 +27,14 @@ func TestTransit(t *testing.T) {
 	u.SetSecurityBarrier(barrier)
 	u.SetMasterKey(masterKey)
 
-	if err := u.PostProcess(ctx, ""); err != nil {
+	if err := u.PostProcess(ctx, []string{""}); err != nil {
 		t.Fatal(err)
 	}
 
 	tr := New(u)
 
 	const keyName = "testkey"
-	if err := tr.CreateKey(ctx, keyName, ""); err != nil {
+	if err := tr.CreateKey(ctx, keyName, "", ""); err != nil {
 		t.Fatal(err)
 	}
 
@@ -50,7 +50,7 @@ func TestTransit(t *testing.T) {
 
 	assert.NotEmpty(t, encrypt.Ciphertext)
 
-	decrypt, err := tr.Decrypt(ctx, keyName, BatchRequestItem{
+	decrypt, err := tr.Decrypt(ctx, keyName, "", BatchRequestItem{
 		Ciphertext: encrypt.Ciphertext,
 		KeyVersion: encrypt.KeyVersion,
 	})

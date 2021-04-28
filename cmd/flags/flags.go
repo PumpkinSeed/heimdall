@@ -7,20 +7,22 @@ const (
 	NameLogOutput     = "log-output"
 	NameLogAdditional = "log-additional"
 
-	NameGrpc          = "grpc"
-	NameRest          = "rest"
-	NameSocket        = "socket"
-	NameThreshold     = "threshold"
-	NameTotalShares   = "total-shares"
-	NameConsulAddress = "consul-address"
-	NameConsulToken   = "consul-token"
-	NameInMemory      = "in-memory"
+	NameGrpc              = "grpc"
+	NameRest              = "rest"
+	NameSocket            = "socket"
+	NameThreshold         = "threshold"
+	NameTotalShares       = "total-shares"
+	NameDefaultEnginePath = "default-engine-path"
+	NameConsulAddress     = "consul-address"
+	NameConsulToken       = "consul-token"
+	NameInMemory          = "in-memory"
 
 	grpcDefaultAddr    = "0.0.0.0:9090"
 	restDefaultAddr    = "0.0.0.0:8080"
 	socketDefaultPath  = "/tmp/heimdall.sock"
 	thresholdDefault   = 3
 	totalSharesDefault = 5
+	defaultEnginePath  = "transit/"
 )
 
 var (
@@ -63,6 +65,12 @@ var (
 		Name:  NameTotalShares,
 		Usage: "The shamir's total shares",
 		Value: totalSharesDefault,
+	}
+
+	DefaultEnginePath = &cli.StringFlag{
+		Name:  NameDefaultEnginePath,
+		Usage: "If there are multiple secret engines mounted, choose one as default value",
+		Value: defaultEnginePath,
 	}
 
 	// TODO add flag to handle multiple database types

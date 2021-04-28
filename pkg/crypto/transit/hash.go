@@ -62,8 +62,8 @@ func (t Transit) Hash(ctx context.Context, inputB64, algo, format string) (strin
 	return retStr, nil
 }
 
-func (t Transit) HMAC(ctx context.Context, keyName, inputB64, algo string, keyVersion int) (string, error) {
-	key, err := t.GetKey(ctx, keyName)
+func (t Transit) HMAC(ctx context.Context, keyName, inputB64, algo string, keyVersion int, engineName string) (string, error) {
+	key, err := t.GetKey(ctx, keyName, engineName)
 	if err != nil {
 		return "", err
 	}
