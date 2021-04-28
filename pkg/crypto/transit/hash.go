@@ -12,10 +12,11 @@ import (
 	"hash"
 	"strconv"
 
+	"github.com/PumpkinSeed/heimdall/pkg/structs"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 )
 
-func (t Transit) Hash(ctx context.Context, inputB64, algo, format string) (string, error) {
+func (t Transit) Hash(ctx context.Context, inputB64 string, algo structs.HashType, format string) (string, error) {
 	input, err := base64.StdEncoding.DecodeString(inputB64)
 	if err != nil {
 		return "", fmt.Errorf("unable to decode input as base64: %v", err)
@@ -25,8 +26,8 @@ func (t Transit) Hash(ctx context.Context, inputB64, algo, format string) (strin
 		format = "hex"
 	}
 
-	if algo == "" {
-		algo = "sha2-256"
+	if algo == structs.HashType_EmptyHashType {
+		algo = structs.HashType_HashTypeSHA2256
 	}
 
 	switch format {
@@ -37,13 +38,13 @@ func (t Transit) Hash(ctx context.Context, inputB64, algo, format string) (strin
 
 	var hf hash.Hash
 	switch algo {
-	case "sha2-256":
+	case structs.HashType_HashTypeSHA2256:
 		hf = sha256.New()
-	case "sha2-224":
+	case structs.HashType_HashTypeSHA2224:
 		hf = sha256.New224()
-	case "sha2-384":
+	case structs.HashType_HashTypeSHA2384:
 		hf = sha512.New384()
-	case "sha2-512":
+	case structs.HashType_HashTypeSHA2512:
 		hf = sha512.New()
 	default:
 		return "", fmt.Errorf("unsupported algorithm %s", algo)
