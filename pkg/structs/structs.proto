@@ -16,6 +16,8 @@ service Encryption {
 
     rpc Sign (SignParameters) returns (SignResponse);
     rpc VerifySigned (VerificationRequest) returns (VerificationResponse);
+
+    rpc Health(HealthRequest) returns (HealthResponse);
 }
 
 message Empty {
@@ -145,4 +147,12 @@ message VerificationRequest {
 
 message VerificationResponse {
     bool verificationResult = 1;
+}
+
+message HealthRequest {
+}
+
+message HealthResponse {
+    string status = 1;
+    string message = 2;
 }
