@@ -74,16 +74,16 @@ func (c proxyClient) CreateKey(ctx context.Context, key *structs.Key) (*structs.
 	return c.next().CreateKey(ctx, key)
 }
 
-func (c proxyClient) ReadKey(ctx context.Context, keyName string) (*structs.KeyResponse, error) {
-	return c.next().ReadKey(ctx, &structs.KeyName{Name: keyName})
+func (c proxyClient) ReadKey(ctx context.Context, keyName, engineName string) (*structs.KeyResponse, error) {
+	return c.next().ReadKey(ctx, &structs.KeyName{Name: keyName, EngineName: engineName})
 }
 
-func (c proxyClient) DeleteKey(ctx context.Context, keyName string) (*structs.KeyResponse, error) {
-	return c.next().DeleteKey(ctx, &structs.KeyName{Name: keyName})
+func (c proxyClient) DeleteKey(ctx context.Context, keyName, engineName string) (*structs.KeyResponse, error) {
+	return c.next().DeleteKey(ctx, &structs.KeyName{Name: keyName, EngineName: engineName})
 }
 
-func (c proxyClient) ListKeys(ctx context.Context) (*structs.KeyListResponse, error) {
-	return c.next().ListKeys(ctx, &structs.Empty{})
+func (c proxyClient) ListKeys(ctx context.Context, engineName string) (*structs.KeyListResponse, error) {
+	return c.next().ListKeys(ctx, &structs.Empty{EngineName: engineName})
 }
 
 func (c proxyClient) Encrypt(ctx context.Context, encrypt *structs.EncryptRequest) (*structs.CryptoResult, error) {

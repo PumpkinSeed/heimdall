@@ -144,7 +144,7 @@ func (u *Unseal) DevMode(ctx context.Context) error {
 		return err
 	}
 	u.SetMasterKey(masterKey)
-	u.SetDefaultEnginePath("")
+	u.SetDefaultEnginePath("transit/")
 	return u.PostProcess(ctx, map[string]string{"transit/":"logical/00000000-0000-0000-0000-000000000000"})
 }
 

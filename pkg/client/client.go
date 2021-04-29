@@ -16,9 +16,9 @@ func New(o Options) Client {
 
 type Client interface {
 	CreateKey(ctx context.Context, key *structs.Key) (*structs.KeyResponse, error)
-	ReadKey(ctx context.Context, keyName string) (*structs.KeyResponse, error)
-	DeleteKey(ctx context.Context, keyName string) (*structs.KeyResponse, error)
-	ListKeys(ctx context.Context) (*structs.KeyListResponse, error)
+	ReadKey(ctx context.Context, keyName, engineName string) (*structs.KeyResponse, error)
+	DeleteKey(ctx context.Context, keyName, engineName string) (*structs.KeyResponse, error)
+	ListKeys(ctx context.Context, engineName string) (*structs.KeyListResponse, error)
 	Encrypt(ctx context.Context, encrypt *structs.EncryptRequest) (*structs.CryptoResult, error)
 	Decrypt(ctx context.Context, decrypt *structs.DecryptRequest) (*structs.CryptoResult, error)
 	Hash(ctx context.Context, hash *structs.HashRequest) (*structs.HashResponse, error)
