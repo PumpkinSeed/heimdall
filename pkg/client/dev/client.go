@@ -7,6 +7,7 @@ import (
 	"github.com/PumpkinSeed/heimdall/pkg/client"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/transit"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
+	"github.com/PumpkinSeed/heimdall/pkg/crypto/utils"
 	"github.com/PumpkinSeed/heimdall/pkg/structs"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
@@ -54,9 +55,9 @@ type devClient struct {
 func (d devClient) CreateKey(ctx context.Context, key *structs.Key) (*structs.KeyResponse, error) {
 	err := d.transit.CreateKey(ctx, key.Name, key.Type.String(), key.EngineName)
 	return &structs.KeyResponse{
-		//Status:  getStatus(err), // TODO depends on http changes
-		//Message: getMessage(err), // TODO depends on http changes
-		Key: key,
+		Status:  utils.GetStatus(err),
+		Message: utils.GetMessage(err),
+		Key:     key,
 	}, err
 }
 
@@ -69,8 +70,8 @@ func (d devClient) ReadKey(ctx context.Context, keyName, engineName string) (*st
 	}
 
 	return &structs.KeyResponse{
-		//Status:  getStatus(err), // TODO depends on http changes
-		//Message: getMessage(err), // TODO depends on http changes
+		Status:  utils.GetStatus(err),
+		Message: utils.GetMessage(err),
 		Key: &structs.Key{
 			Name: key.Name,
 			Type: structs.EncryptionType(structs.EncryptionType_value[key.Type.String()]),
@@ -87,8 +88,8 @@ func (d devClient) DeleteKey(ctx context.Context, keyName, engineName string) (*
 	}
 
 	return &structs.KeyResponse{
-		//Status:  getStatus(err), // TODO depends on http changes
-		//Message: getMessage(err), // TODO depends on http changes
+		Status:  utils.GetStatus(err),
+		Message: utils.GetMessage(err),
 		Key: &structs.Key{
 			Name: keyName,
 		},
@@ -110,9 +111,9 @@ func (d devClient) ListKeys(ctx context.Context, engineName string) (*structs.Ke
 	}
 
 	return &structs.KeyListResponse{
-		//Status:  getStatus(err), // TODO depends on http changes
-		//Message: getMessage(err), // TODO depends on http changes
-		Keys: keySlice,
+		Status:  utils.GetStatus(err),
+		Message: utils.GetMessage(err),
+		Keys:    keySlice,
 	}, err
 }
 
