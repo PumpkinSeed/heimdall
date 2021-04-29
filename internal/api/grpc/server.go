@@ -2,11 +2,11 @@ package grpc
 
 import (
 	"context"
-	"github.com/PumpkinSeed/heimdall/pkg/crypto/utils"
 	"net"
 
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/transit"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
+	"github.com/PumpkinSeed/heimdall/pkg/crypto/utils"
 	"github.com/PumpkinSeed/heimdall/pkg/structs"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
