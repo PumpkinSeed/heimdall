@@ -27,15 +27,15 @@ const (
 )
 
 type Unseal struct {
-	masterKey       []byte
-	keyring         *vault.Keyring
-	MountID         string
-	tempKeys        [][]byte
-	Threshold       int
-	TotalShares     int
-	SecurityBarrier vault.SecurityBarrier
-	Backend         physical.Backend
-	storage         logical.Storage // TODO consider to add default value to this, which checks unseal status and returns error if sealed
+	masterKey         []byte
+	keyring           *vault.Keyring
+	tempKeys          [][]byte
+	Threshold         int
+	TotalShares       int
+	defaultEnginePath string
+	SecurityBarrier   vault.SecurityBarrier
+	Backend           physical.Backend
+	storage           map[string]logical.Storage
 }
 
 var (
@@ -48,6 +48,7 @@ func Get() *Unseal {
 	if u == nil {
 		u = &Unseal{
 			TotalShares: defaultTotalShares,
+			storage:     make(map[string]logical.Storage),
 		}
 	}
 
@@ -99,28 +100,27 @@ func (u *Unseal) Keyring(ctx context.Context) error {
 }
 
 // Mount is mounting transit, getting the MountTable from database and decrypt it
-func (u *Unseal) Mount(ctx context.Context) (string, error) {
+func (u *Unseal) Mount(ctx context.Context) (map[string]string, error) {
 	if u.masterKey == nil {
-		return "", errors.New("server is still sealed, unseal it before do anything")
+		return nil, errors.New("server is still sealed, unseal it before do anything")
 	}
 	if u.keyring == nil {
-		return "", errors.New("missing keyring, init keyring first")
+		return nil, errors.New("missing keyring, init keyring first")
 	}
 
 	table, err := mount.Mount(ctx, u.Backend, u.keyring)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
+	res := make(map[string]string)
 	for _, e := range table.Entries {
 		if strings.EqualFold(e.Type, "transit") {
-			u.MountID = e.UUID
-
-			return e.ViewPath(), nil
+			res[e.Path] = e.ViewPath()
 		}
 	}
 
-	return "", errors.New("missing transit entry")
+	return res, nil
 }
 
 func (u *Unseal) Status() Status {
@@ -144,7 +144,8 @@ func (u *Unseal) DevMode(ctx context.Context) error {
 		return err
 	}
 	u.SetMasterKey(masterKey)
-	return u.PostProcess(ctx, "")
+	u.SetDefaultEnginePath("")
+	return u.PostProcess(ctx, map[string]string{"transit/":"logical/00000000-0000-0000-0000-000000000000"})
 }
 
 func (u *Unseal) unseal(ctx context.Context) error {
@@ -184,7 +185,7 @@ func (u *Unseal) unseal(ctx context.Context) error {
 	return nil
 }
 
-func (u *Unseal) PostProcess(ctx context.Context, barrierPath string) error {
+func (u *Unseal) PostProcess(ctx context.Context, barrierPaths map[string]string) error {
 	// TODO check seal key passing
 	if err := u.SecurityBarrier.Initialize(ctx, u.masterKey, []byte{}, rand.Reader); err != nil && !errors.Is(err, vault.ErrBarrierAlreadyInit) {
 		return err
@@ -194,7 +195,9 @@ func (u *Unseal) PostProcess(ctx context.Context, barrierPath string) error {
 		return err
 	}
 
-	u.storage = vault.NewBarrierView(u.SecurityBarrier, barrierPath)
+	for p, bp := range barrierPaths {
+		u.storage[p] = vault.NewBarrierView(u.SecurityBarrier, bp)
+	}
 	return nil
 }
 
@@ -207,8 +210,11 @@ func (u *Unseal) cleanTempKeys() {
 	}
 }
 
-func (u *Unseal) Storage() logical.Storage {
-	return u.storage
+func (u *Unseal) Storage(path string) logical.Storage {
+	if path == "" {
+		path = u.defaultEnginePath
+	}
+	return u.storage[path]
 }
 
 // SetMasterKey is only for testing purpose
@@ -218,4 +224,8 @@ func (u *Unseal) SetMasterKey(key []byte) {
 
 func (u *Unseal) GetKeyRing() *vault.Keyring {
 	return u.keyring
+}
+
+func (u *Unseal) SetDefaultEnginePath(path string) {
+	u.defaultEnginePath = path
 }
