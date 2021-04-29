@@ -8,6 +8,7 @@ import (
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/transit"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/utils"
+	"github.com/PumpkinSeed/heimdall/pkg/healthcheck"
 	"github.com/PumpkinSeed/heimdall/pkg/structs"
 	"github.com/go-chi/chi/v5"
 	log "github.com/sirupsen/logrus"
@@ -17,7 +18,6 @@ const ctxKeyEngine = "engine"
 
 func Serve(addr string) error {
 	s := newServer(unseal.Get())
-	s.Use(s.checkSecretEngineExists)
 	s.Init()
 	log.Infof("HTTP server listening on %s", addr)
 	return http.ListenAndServe(addr, s)
@@ -26,12 +26,14 @@ func Serve(addr string) error {
 type server struct {
 	*chi.Mux
 	transit transit.Transit
+	health  healthcheck.Healthcheck
 }
 
-func newServer(b *unseal.Unseal) EncryptionServer {
+func newServer(u *unseal.Unseal) EncryptionServer {
 	return &server{
 		Mux:     chi.NewRouter(),
-		transit: transit.New(b),
+		transit: transit.New(u),
+		health:  healthcheck.New(u),
 	}
 }
 
@@ -56,17 +58,21 @@ func (s server) checkSecretEngineExists(next http.Handler) http.Handler {
 }
 
 func (s *server) Init() {
-	s.Post("/{engineName:^[0-9a-v]+$}/key", s.CreateKey)
-	s.Get("/{engineName:^[0-9a-v]+$}/key", s.ListKeys)
-	s.Get("/{engineName:^[0-9a-v]+$}/key/{key}", s.ReadKey)
-	s.Delete("/{engineName:^[0-9a-v]+$}/key/{key}", s.DeleteKey)
+	s.Get("/health", s.Health)
+	s.Route("/{engineName:^[0-9a-v]+$}", func(r chi.Router) {
+		r.Use(s.checkSecretEngineExists)
+		r.Post("/key", s.CreateKey)
+		r.Get("/key", s.ListKeys)
+		r.Get("/key/{key}", s.ReadKey)
+		r.Delete("/key/{key}", s.DeleteKey)
 
-	s.Post("/{engineName:^[0-9a-v]+$}/encrypt", s.Encrypt)
-	s.Post("/{engineName:^[0-9a-v]+$}/decrypt", s.Decrypt)
-	s.Post("/{engineName:^[0-9a-v]+$}/hash", s.Hash)
-	s.Post("/{engineName:^[0-9a-v]+$}/hmac", s.GenerateHMAC)
-	s.Post("/{engineName:^[0-9a-v]+$}/sign", s.Sign)
-	s.Post("/{engineName:^[0-9a-v]+$}/verify", s.VerifySigned)
+		r.Post("/encrypt", s.Encrypt)
+		r.Post("/decrypt", s.Decrypt)
+		r.Post("/hash", s.Hash)
+		r.Post("/hmac", s.GenerateHMAC)
+		r.Post("/sign", s.Sign)
+		r.Post("/verify", s.VerifySigned)
+	})
 }
 
 func (s server) CreateKey(w http.ResponseWriter, r *http.Request) {
@@ -340,6 +346,10 @@ func (s server) VerifySigned(w http.ResponseWriter, r *http.Request) {
 	successResponse(w, verificationResult)
 }
 
+func (s server) Health(w http.ResponseWriter, r *http.Request) {
+	successResponse(w, s.health.Check(r.Context()))
+}
+
 type EncryptionServer interface {
 	chi.Router
 
@@ -353,6 +363,7 @@ type EncryptionServer interface {
 	GenerateHMAC(w http.ResponseWriter, r *http.Request)
 	Sign(w http.ResponseWriter, r *http.Request)
 	VerifySigned(w http.ResponseWriter, r *http.Request)
+	Health(w http.ResponseWriter, r *http.Request)
 
 	Init()
 	checkSecretEngineExists(next http.Handler) http.Handler
