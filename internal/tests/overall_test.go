@@ -22,7 +22,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var force = true
+var force = false
 
 func TestEncrypt(t *testing.T) {
 	if runTest := os.Getenv("OVERALL"); force == false && runTest != "true" {
