@@ -1,6 +1,12 @@
 package utils
 
-import "github.com/PumpkinSeed/heimdall/pkg/structs"
+import (
+	"regexp"
+
+	"github.com/PumpkinSeed/heimdall/pkg/structs"
+)
+
+var EngineNameRegexp = regexp.MustCompile("^/[0-9a-v]+/")
 
 func GetStatus(err error) structs.Status {
 	if err != nil {

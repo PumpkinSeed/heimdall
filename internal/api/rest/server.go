@@ -39,10 +39,20 @@ func newServer(b *unseal.Unseal) EncryptionServer {
 
 func (s server) checkSecretEngineExists(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		engineName := strings.SplitN(strings.TrimPrefix(r.RequestURI, "/"), "/", 2)[0]
-		// TODO check if secret engine exists
+		m := utils.EngineNameRegexp.FindStringSubmatch(r.RequestURI)
+		if len(m) == 0 || len(m[0]) == 0 {
+			log.Error("missing engine name")
+			http.Error(w, "missing engine name", http.StatusBadRequest)
+			return
+		}
+		engineName := strings.TrimPrefix(m[0],"/")
+		if exists := s.transit.CheckEngine(engineName); !exists {
+			log.Errorf("engine not found: %s", engineName)
+			http.Error(w, "engine not found", http.StatusBadRequest)
+			return
+		}
 		log.Printf("engine used: %s", engineName)
-		context.WithValue(r.Context(), engine, engineName)
+		r = r.WithContext(context.WithValue(r.Context(), engine, engineName))
 
 		next.ServeHTTP(w, r)
 	})
@@ -70,7 +80,13 @@ func (s server) CreateKey(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err := s.transit.CreateKey(ctx, req.Name, req.Type.String())
+	engineName := r.Context().Value(engine).(string)
+	if engineName == "" {
+		log.Error("missing engine name")
+		http.Error(w, "missing engine name", http.StatusBadRequest)
+		return
+	}
+	err := s.transit.CreateKey(ctx, req.Name, req.Type.String(), engineName)
 	if err != nil {
 		log.Error(err)
 		http.Error(w, "internal server error"+err.Error(), http.StatusBadRequest)
@@ -89,7 +105,13 @@ func (s server) ReadKey(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "key not found", http.StatusBadRequest)
 		return
 	}
-	k, err := s.transit.GetKey(r.Context(), key)
+	engineName := r.Context().Value(engine).(string)
+	if engineName == "" {
+		log.Error("missing engine name")
+		http.Error(w, "missing engine name", http.StatusBadRequest)
+		return
+	}
+	k, err := s.transit.GetKey(r.Context(), key, engineName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -111,7 +133,14 @@ func (s server) DeleteKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := s.transit.DeleteKey(r.Context(), key)
+	engineName := r.Context().Value(engine).(string)
+	if engineName == "" {
+		log.Error("missing engine name")
+		http.Error(w, "missing engine name", http.StatusBadRequest)
+		return
+	}
+
+	err := s.transit.DeleteKey(r.Context(), key, engineName)
 	if err != nil {
 		log.Errorf("Error with key deletion [%s]: %v", key, err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -128,9 +157,14 @@ func (s server) DeleteKey(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s server) ListKeys(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
+	engineName := r.Context().Value(engine).(string)
+	if engineName == "" {
+		log.Error("missing engine name")
+		http.Error(w, "missing engine name", http.StatusBadRequest)
+		return
+	}
 
-	keys, err := s.transit.ListKeys(ctx)
+	keys, err := s.transit.ListKeys(r.Context(), engineName)
 	if err != nil {
 		log.Error(err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -152,6 +186,13 @@ func (s server) ListKeys(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s server) Encrypt(w http.ResponseWriter, r *http.Request) {
+	engineName := r.Context().Value(engine).(string)
+	if engineName == "" {
+		log.Error("missing engine name")
+		http.Error(w, "missing engine name", http.StatusBadRequest)
+		return
+	}
+
 	var req structs.EncryptRequest
 	if err := bind(r, &req); err != nil {
 		log.Error(err)
@@ -159,7 +200,7 @@ func (s server) Encrypt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	e, err := s.transit.Encrypt(r.Context(), req.KeyName, transit.BatchRequestItem{
+	e, err := s.transit.Encrypt(r.Context(), req.KeyName, engineName, transit.BatchRequestItem{
 		Plaintext:  req.PlainText,
 		Nonce:      req.Nonce,
 		KeyVersion: int(req.KeyVersion),
@@ -175,6 +216,13 @@ func (s server) Encrypt(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s server) Decrypt(w http.ResponseWriter, r *http.Request) {
+	engineName := r.Context().Value(engine).(string)
+	if engineName == "" {
+		log.Error("missing engine name")
+		http.Error(w, "missing engine name", http.StatusBadRequest)
+		return
+	}
+
 	var req structs.DecryptRequest
 	if err := bind(r, &req); err != nil {
 		log.Error(err)
@@ -182,7 +230,7 @@ func (s server) Decrypt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	d, err := s.transit.Decrypt(r.Context(), req.KeyName, transit.BatchRequestItem{
+	d, err := s.transit.Decrypt(r.Context(), req.KeyName, engineName, transit.BatchRequestItem{
 		Ciphertext: req.Ciphertext,
 		Nonce:      req.Nonce,
 		KeyVersion: int(req.KeyVersion),
@@ -216,6 +264,13 @@ func (s server) Hash(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s server) GenerateHMAC(w http.ResponseWriter, r *http.Request) {
+	engineName := r.Context().Value(engine).(string)
+	if engineName == "" {
+		log.Error("missing engine name")
+		http.Error(w, "missing engine name", http.StatusBadRequest)
+		return
+	}
+
 	var req structs.HMACRequest
 	if err := bind(r, &req); err != nil {
 		log.Error(err)
@@ -223,7 +278,7 @@ func (s server) GenerateHMAC(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hmac, err := s.transit.HMAC(r.Context(), req.KeyName, req.Input, req.Algorithm, int(req.KeyVersion))
+	hmac, err := s.transit.HMAC(r.Context(), req.KeyName, req.Input, req.Algorithm, int(req.KeyVersion), engineName)
 	if err != nil {
 		log.Errorf("Error HMAC generating: %v", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -235,12 +290,21 @@ func (s server) GenerateHMAC(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s server) Sign(w http.ResponseWriter, r *http.Request) {
+	engineName := r.Context().Value(engine).(string)
+	if engineName == "" {
+		log.Error("missing engine name")
+		http.Error(w, "missing engine name", http.StatusBadRequest)
+		return
+	}
+
 	var req structs.SignParameters
 	if err := bind(r, &req); err != nil {
 		log.Error(err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	req.EngineName = engineName
 
 	signature, err := s.transit.Sign(r.Context(), &req)
 	if err != nil {
@@ -253,12 +317,21 @@ func (s server) Sign(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s server) VerifySigned(w http.ResponseWriter, r *http.Request) {
+	engineName := r.Context().Value(engine).(string)
+	if engineName == "" {
+		log.Error("missing engine name")
+		http.Error(w, "missing engine name", http.StatusBadRequest)
+		return
+	}
+
 	var req structs.VerificationRequest
 	if err := bind(r, &req); err != nil {
 		log.Error(err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	req.EngineName = engineName
 
 	verificationResult, err := s.transit.VerifySign(r.Context(), &req)
 	if err != nil {
