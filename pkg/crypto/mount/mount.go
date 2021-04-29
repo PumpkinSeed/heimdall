@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
+
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/keyring"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/utils"
 	"github.com/hashicorp/vault/helper/namespace"

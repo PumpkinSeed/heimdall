@@ -7,8 +7,8 @@ import (
 	"fmt"
 )
 
-func (t Transit) Encrypt(ctx context.Context, key string, req BatchRequestItem) (EncryptBatchResponseItem, error) {
-	p, err := t.GetKey(ctx, key)
+func (t Transit) Encrypt(ctx context.Context, key, engineName string, req BatchRequestItem) (EncryptBatchResponseItem, error) {
+	p, err := t.GetKey(ctx, key, engineName)
 	if err != nil {
 		return EncryptBatchResponseItem{}, err
 	}

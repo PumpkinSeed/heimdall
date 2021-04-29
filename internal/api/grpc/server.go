@@ -35,7 +35,7 @@ func newServer(b *unseal.Unseal) server {
 }
 
 func (s server) CreateKey(ctx context.Context, key *structs.Key) (*structs.KeyResponse, error) {
-	err := s.transit.CreateKey(ctx, key.Name, key.Type.String())
+	err := s.transit.CreateKey(ctx, key.Name, key.Type.String(), key.EngineName)
 	if err != nil {
 		log.Errorf("Error with key creation [%s|%s]: %v", key.Name, key.Type, err)
 	}
@@ -48,7 +48,7 @@ func (s server) CreateKey(ctx context.Context, key *structs.Key) (*structs.KeyRe
 }
 
 func (s server) ReadKey(ctx context.Context, key *structs.KeyName) (*structs.KeyResponse, error) {
-	k, err := s.transit.GetKey(ctx, key.Name)
+	k, err := s.transit.GetKey(ctx, key.Name, key.EngineName)
 	if err != nil {
 		log.Errorf("Error with key reading [%s]: %v", key.Name, err)
 	}
@@ -64,7 +64,7 @@ func (s server) ReadKey(ctx context.Context, key *structs.KeyName) (*structs.Key
 }
 
 func (s server) DeleteKey(ctx context.Context, key *structs.KeyName) (*structs.KeyResponse, error) {
-	err := s.transit.DeleteKey(ctx, key.Name)
+	err := s.transit.DeleteKey(ctx, key.Name, key.EngineName)
 	if err != nil {
 		log.Errorf("Error with key deletion [%s]: %v", key.Name, err)
 	}
@@ -78,8 +78,8 @@ func (s server) DeleteKey(ctx context.Context, key *structs.KeyName) (*structs.K
 	}, nil
 }
 
-func (s server) ListKeys(ctx context.Context, _ *structs.Empty) (*structs.KeyListResponse, error) {
-	keys, err := s.transit.ListKeys(ctx)
+func (s server) ListKeys(ctx context.Context, in *structs.Empty) (*structs.KeyListResponse, error) {
+	keys, err := s.transit.ListKeys(ctx, in.EngineName)
 	if err != nil {
 		log.Errorf("Error getting keys: %v", err)
 	}
@@ -100,7 +100,7 @@ func (s server) ListKeys(ctx context.Context, _ *structs.Empty) (*structs.KeyLis
 }
 
 func (s server) Encrypt(ctx context.Context, req *structs.EncryptRequest) (*structs.CryptoResult, error) {
-	e, err := s.transit.Encrypt(ctx, req.KeyName, transit.BatchRequestItem{
+	e, err := s.transit.Encrypt(ctx, req.KeyName, req.EngineName, transit.BatchRequestItem{
 		Plaintext:  req.PlainText,
 		Nonce:      req.Nonce,
 		KeyVersion: int(req.KeyVersion),
@@ -115,7 +115,7 @@ func (s server) Encrypt(ctx context.Context, req *structs.EncryptRequest) (*stru
 }
 
 func (s server) Decrypt(ctx context.Context, req *structs.DecryptRequest) (*structs.CryptoResult, error) {
-	d, err := s.transit.Decrypt(ctx, req.KeyName, transit.BatchRequestItem{
+	d, err := s.transit.Decrypt(ctx, req.KeyName, req.EngineName, transit.BatchRequestItem{
 		Ciphertext: req.Ciphertext,
 		Nonce:      req.Nonce,
 		KeyVersion: int(req.KeyVersion),
@@ -141,7 +141,7 @@ func (s server) Hash(ctx context.Context, req *structs.HashRequest) (*structs.Ha
 }
 
 func (s server) GenerateHMAC(ctx context.Context, req *structs.HMACRequest) (*structs.HMACResponse, error) {
-	hmac, err := s.transit.HMAC(ctx, req.KeyName, req.Input, req.Algorithm, int(req.KeyVersion))
+	hmac, err := s.transit.HMAC(ctx, req.KeyName, req.Input, req.Algorithm, int(req.KeyVersion), req.EngineName)
 	if err != nil {
 		log.Errorf("Error HMAC generating: %v", err)
 	}
