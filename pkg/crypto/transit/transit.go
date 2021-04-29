@@ -22,6 +22,10 @@ func New(u *unseal.Unseal) Transit {
 	}
 }
 
+func (t Transit) CheckEngine(engineName string) bool {
+	return t.u.CheckEngine(engineName)
+}
+
 // BatchRequestItem represents a request item for batch processing
 type BatchRequestItem struct {
 	// Context for key derivation. This is required for derived keys.
