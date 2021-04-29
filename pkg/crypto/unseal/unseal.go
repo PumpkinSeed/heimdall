@@ -145,7 +145,7 @@ func (u *Unseal) DevMode(ctx context.Context) error {
 	}
 	u.SetMasterKey(masterKey)
 	u.SetDefaultEnginePath("transit/")
-	return u.PostProcess(ctx, map[string]string{"transit/":"logical/00000000-0000-0000-0000-000000000000"})
+	return u.PostProcess(ctx, map[string]string{"transit/": "logical/00000000-0000-0000-0000-000000000000"})
 }
 
 func (u *Unseal) unseal(ctx context.Context) error {
@@ -215,6 +215,13 @@ func (u *Unseal) Storage(path string) logical.Storage {
 		path = u.defaultEnginePath
 	}
 	return u.storage[path]
+}
+
+func (u *Unseal) CheckEngine(path string) bool {
+	if _, ok := u.storage[path]; ok {
+		return true
+	}
+	return false
 }
 
 // SetMasterKey is only for testing purpose
