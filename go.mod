@@ -11,6 +11,7 @@ require (
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/hashicorp/vault v1.7.0
 	github.com/hashicorp/vault/sdk v0.1.14-0.20210322210658-b52b8b8c1264
+	github.com/rs/xid v1.3.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
 	github.com/urfave/cli/v2 v2.3.0
