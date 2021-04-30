@@ -31,7 +31,7 @@ func TestEncrypt(t *testing.T) {
 	set.String(flags.NameConsulToken, "89C2B840-CDE0-4E77-ACAF-73EABB7A489B", "doc")
 	set.String(flags.NameConsulAddress, "127.0.0.1:8500", "doc")
 	set.String(flags.NameGrpc, "0.0.0.0:9090", "doc")
-	set.String(flags.NameRest, "0.0.0.0:10080", "doc")
+	set.String(flags.NameHttp, "0.0.0.0:10080", "doc")
 	set.String(flags.NameSocket, "/tmp/mellek.sock", "doc")
 	set.Int(flags.NameThreshold, 3, "doc")
 	set.Int(flags.NameTotalShares, 5, "doc")
