@@ -28,6 +28,7 @@ type EncryptionClient interface {
 	GenerateHMAC(ctx context.Context, in *HMACRequest, opts ...grpc.CallOption) (*HMACResponse, error)
 	Sign(ctx context.Context, in *SignParameters, opts ...grpc.CallOption) (*SignResponse, error)
 	VerifySigned(ctx context.Context, in *VerificationRequest, opts ...grpc.CallOption) (*VerificationResponse, error)
+	Health(ctx context.Context, in *HealthRequest, opts ...grpc.CallOption) (*HealthResponse, error)
 }
 
 type encryptionClient struct {
@@ -128,6 +129,15 @@ func (c *encryptionClient) VerifySigned(ctx context.Context, in *VerificationReq
 	return out, nil
 }
 
+func (c *encryptionClient) Health(ctx context.Context, in *HealthRequest, opts ...grpc.CallOption) (*HealthResponse, error) {
+	out := new(HealthResponse)
+	err := c.cc.Invoke(ctx, "/Encryption/Health", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // EncryptionServer is the server API for Encryption service.
 // All implementations must embed UnimplementedEncryptionServer
 // for forward compatibility
@@ -142,6 +152,7 @@ type EncryptionServer interface {
 	GenerateHMAC(context.Context, *HMACRequest) (*HMACResponse, error)
 	Sign(context.Context, *SignParameters) (*SignResponse, error)
 	VerifySigned(context.Context, *VerificationRequest) (*VerificationResponse, error)
+	Health(context.Context, *HealthRequest) (*HealthResponse, error)
 	mustEmbedUnimplementedEncryptionServer()
 }
 
@@ -178,6 +189,9 @@ func (UnimplementedEncryptionServer) Sign(context.Context, *SignParameters) (*Si
 }
 func (UnimplementedEncryptionServer) VerifySigned(context.Context, *VerificationRequest) (*VerificationResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method VerifySigned not implemented")
+}
+func (UnimplementedEncryptionServer) Health(context.Context, *HealthRequest) (*HealthResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Health not implemented")
 }
 func (UnimplementedEncryptionServer) mustEmbedUnimplementedEncryptionServer() {}
 
@@ -372,6 +386,24 @@ func _Encryption_VerifySigned_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Encryption_Health_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(HealthRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EncryptionServer).Health(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Encryption/Health",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EncryptionServer).Health(ctx, req.(*HealthRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Encryption_ServiceDesc is the grpc.ServiceDesc for Encryption service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -418,6 +450,10 @@ var Encryption_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "VerifySigned",
 			Handler:    _Encryption_VerifySigned_Handler,
+		},
+		{
+			MethodName: "Health",
+			Handler:    _Encryption_Health_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

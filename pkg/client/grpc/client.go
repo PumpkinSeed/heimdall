@@ -108,3 +108,7 @@ func (c proxyClient) Sign(ctx context.Context, in *structs.SignParameters) (*str
 func (c proxyClient) VerifySigned(ctx context.Context, in *structs.VerificationRequest) (*structs.VerificationResponse, error) {
 	return c.next().VerifySigned(ctx, in)
 }
+
+func (c proxyClient) Health(ctx context.Context, in *structs.HealthRequest) (*structs.HealthResponse, error) {
+	return c.next().Health(ctx, in)
+}

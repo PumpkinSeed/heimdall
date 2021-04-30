@@ -5,7 +5,7 @@ import (
 
 	"github.com/PumpkinSeed/heimdall/cmd/flags"
 	"github.com/PumpkinSeed/heimdall/internal/api/grpc"
-	"github.com/PumpkinSeed/heimdall/internal/api/rest"
+	"github.com/PumpkinSeed/heimdall/internal/api/http"
 	"github.com/PumpkinSeed/heimdall/internal/api/socket"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	"github.com/PumpkinSeed/heimdall/pkg/storage"
@@ -21,7 +21,7 @@ var Cmd = &cli.Command{
 	Before: setup,
 	Flags: []cli.Flag{
 		flags.Grpc,
-		flags.Rest,
+		flags.HTTP,
 		flags.Socket,
 		flags.Threshold,
 		flags.ConsulAddress,
@@ -39,7 +39,7 @@ func serve(ctx *cli.Context) error {
 	}
 
 	serverExecutor(grpc.Serve, ctx.String(flags.NameGrpc), finished)
-	serverExecutor(rest.Serve, ctx.String(flags.NameRest), finished)
+	serverExecutor(http.Serve, ctx.String(flags.NameHttp), finished)
 	serverExecutor(socket.Serve, ctx.String(flags.NameSocket), finished)
 
 	<-finished

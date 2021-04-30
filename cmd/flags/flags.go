@@ -8,7 +8,7 @@ const (
 	NameLogAdditional = "log-additional"
 
 	NameGrpc              = "grpc"
-	NameRest              = "rest"
+	NameHttp              = "http"
 	NameSocket            = "socket"
 	NameThreshold         = "threshold"
 	NameTotalShares       = "total-shares"
@@ -18,7 +18,7 @@ const (
 	NameInMemory          = "in-memory"
 
 	grpcDefaultAddr    = "0.0.0.0:9090"
-	restDefaultAddr    = "0.0.0.0:8080"
+	httpDefaultAddr    = "0.0.0.0:8080"
 	socketDefaultPath  = "/tmp/heimdall.sock"
 	thresholdDefault   = 3
 	totalSharesDefault = 5
@@ -44,10 +44,10 @@ var (
 		Usage: "Starts grpc server and listen on specified address",
 		Value: grpcDefaultAddr,
 	}
-	Rest = &cli.StringFlag{
-		Name:  NameRest,
+	HTTP = &cli.StringFlag{
+		Name:  NameHttp,
 		Usage: "Starts HTTP server and listen on specified address",
-		Value: restDefaultAddr,
+		Value: httpDefaultAddr,
 	}
 	Socket = &cli.StringFlag{
 		Name:  NameSocket,
