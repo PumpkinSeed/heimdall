@@ -3,9 +3,10 @@ package http
 import (
 	"context"
 	"fmt"
-	"github.com/PumpkinSeed/heimdall/pkg/structs"
 	"testing"
 	"time"
+
+	"github.com/PumpkinSeed/heimdall/pkg/structs"
 )
 
 func TestClient(t *testing.T) {
