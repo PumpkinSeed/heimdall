@@ -16,6 +16,8 @@ const (
 	NameConsulAddress     = "consul-address"
 	NameConsulToken       = "consul-token"
 	NameInMemory          = "in-memory"
+	NameDisableHttp       = "disable-http"
+	NameDisableGrpc       = "disable-grpc"
 
 	grpcDefaultAddr    = "0.0.0.0:9090"
 	httpDefaultAddr    = "0.0.0.0:8080"
@@ -85,6 +87,18 @@ var (
 	InMemory = &cli.BoolFlag{
 		Name:  NameInMemory,
 		Usage: "Starts the server with in memory physical backend for development",
+		Value: false,
+	}
+
+	DisableGrpc = &cli.BoolFlag{
+		Name:  NameDisableGrpc,
+		Usage: "",
+		Value: false,
+	}
+
+	DisableHttp = &cli.BoolFlag{
+		Name:  NameDisableHttp,
+		Usage: "",
 		Value: false,
 	}
 )
