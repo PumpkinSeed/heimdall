@@ -8,12 +8,15 @@ import (
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/transit"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/utils"
+	"github.com/PumpkinSeed/heimdall/pkg/healthcheck"
 	"github.com/PumpkinSeed/heimdall/pkg/structs"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault"
 	log "github.com/sirupsen/logrus"
 )
+
+const defaultEngine = "transit/"
 
 type Options struct {
 }
@@ -27,9 +30,10 @@ func (o Options) Setup() client.Client {
 		panic(err)
 	}
 
-	return devClient{
+	return &devClient{
 		u:       u,
 		transit: transit.New(u),
+		health:  healthcheck.New(u),
 	}
 }
 
@@ -50,10 +54,11 @@ func buildSecurityBarrier() (physical.Backend, vault.SecurityBarrier) {
 type devClient struct {
 	u       *unseal.Unseal
 	transit transit.Transit
+	health  healthcheck.Healthcheck
 }
 
-func (d devClient) CreateKey(ctx context.Context, key *structs.Key) (*structs.KeyResponse, error) {
-	err := d.transit.CreateKey(ctx, key.Name, key.Type.String(), key.EngineName)
+func (d *devClient) CreateKey(ctx context.Context, key *structs.Key) (*structs.KeyResponse, error) {
+	err := d.transit.CreateKey(ctx, key.Name, key.Type.String(), defaultEngine)
 	return &structs.KeyResponse{
 		Status:  utils.GetStatus(err),
 		Message: utils.GetMessage(err),
@@ -61,8 +66,8 @@ func (d devClient) CreateKey(ctx context.Context, key *structs.Key) (*structs.Ke
 	}, err
 }
 
-func (d devClient) ReadKey(ctx context.Context, keyName, engineName string) (*structs.KeyResponse, error) {
-	key, err := d.transit.GetKey(ctx, keyName, engineName)
+func (d *devClient) ReadKey(ctx context.Context, keyName string) (*structs.KeyResponse, error) {
+	key, err := d.transit.GetKey(ctx, keyName, defaultEngine)
 	if err != nil {
 		log.Errorf("Error with key reading [%s]: %v", keyName, err)
 
@@ -79,8 +84,8 @@ func (d devClient) ReadKey(ctx context.Context, keyName, engineName string) (*st
 	}, err
 }
 
-func (d devClient) DeleteKey(ctx context.Context, keyName, engineName string) (*structs.KeyResponse, error) {
-	err := d.transit.DeleteKey(ctx, keyName, engineName)
+func (d *devClient) DeleteKey(ctx context.Context, keyName string) (*structs.KeyResponse, error) {
+	err := d.transit.DeleteKey(ctx, keyName, defaultEngine)
 	if err != nil {
 		log.Errorf("Error with key deletion [%s]: %v", keyName, err)
 
@@ -96,8 +101,8 @@ func (d devClient) DeleteKey(ctx context.Context, keyName, engineName string) (*
 	}, err
 }
 
-func (d devClient) ListKeys(ctx context.Context, engineName string) (*structs.KeyListResponse, error) {
-	keys, err := d.transit.ListKeys(ctx, engineName)
+func (d *devClient) ListKeys(ctx context.Context) (*structs.KeyListResponse, error) {
+	keys, err := d.transit.ListKeys(ctx, defaultEngine)
 	if err != nil {
 		log.Errorf("Error getting keys: %v", err)
 	}
@@ -117,8 +122,8 @@ func (d devClient) ListKeys(ctx context.Context, engineName string) (*structs.Ke
 	}, err
 }
 
-func (d devClient) Encrypt(ctx context.Context, encrypt *structs.EncryptRequest) (*structs.CryptoResult, error) {
-	e, err := d.transit.Encrypt(ctx, encrypt.KeyName, encrypt.EngineName, transit.BatchRequestItem{
+func (d *devClient) Encrypt(ctx context.Context, encrypt *structs.EncryptRequest) (*structs.CryptoResult, error) {
+	e, err := d.transit.Encrypt(ctx, encrypt.KeyName, defaultEngine, transit.BatchRequestItem{
 		Plaintext:  encrypt.PlainText,
 		Nonce:      encrypt.Nonce,
 		KeyVersion: int(encrypt.KeyVersion),
@@ -134,8 +139,8 @@ func (d devClient) Encrypt(ctx context.Context, encrypt *structs.EncryptRequest)
 	}, nil
 }
 
-func (d devClient) Decrypt(ctx context.Context, decrypt *structs.DecryptRequest) (*structs.CryptoResult, error) {
-	decRes, err := d.transit.Decrypt(ctx, decrypt.KeyName, decrypt.EngineName, transit.BatchRequestItem{
+func (d *devClient) Decrypt(ctx context.Context, decrypt *structs.DecryptRequest) (*structs.CryptoResult, error) {
+	decRes, err := d.transit.Decrypt(ctx, decrypt.KeyName, defaultEngine, transit.BatchRequestItem{
 		Ciphertext: decrypt.Ciphertext,
 		Nonce:      decrypt.Nonce,
 		KeyVersion: int(decrypt.KeyVersion),
@@ -151,7 +156,7 @@ func (d devClient) Decrypt(ctx context.Context, decrypt *structs.DecryptRequest)
 	}, err
 }
 
-func (d devClient) Hash(ctx context.Context, hashReq *structs.HashRequest) (*structs.HashResponse, error) {
+func (d *devClient) Hash(ctx context.Context, hashReq *structs.HashRequest) (*structs.HashResponse, error) {
 	hash, err := d.transit.Hash(ctx, hashReq.Input, hashReq.Algorithm, hashReq.Format)
 	if err != nil {
 		log.Errorf("Error hashing: %v", err)
@@ -164,8 +169,8 @@ func (d devClient) Hash(ctx context.Context, hashReq *structs.HashRequest) (*str
 	}, err
 }
 
-func (d devClient) GenerateHMAC(ctx context.Context, hmacReq *structs.HMACRequest) (*structs.HMACResponse, error) {
-	hmac, err := d.transit.HMAC(ctx, hmacReq.KeyName, hmacReq.Input, hmacReq.Algorithm, int(hmacReq.KeyVersion), hmacReq.EngineName)
+func (d *devClient) GenerateHMAC(ctx context.Context, hmacReq *structs.HMACRequest) (*structs.HMACResponse, error) {
+	hmac, err := d.transit.HMAC(ctx, hmacReq.KeyName, hmacReq.Input, hmacReq.Algorithm, int(hmacReq.KeyVersion), defaultEngine)
 	if err != nil {
 		log.Errorf("Error HMAC generating: %v", err)
 
@@ -177,7 +182,8 @@ func (d devClient) GenerateHMAC(ctx context.Context, hmacReq *structs.HMACReques
 	}, err
 }
 
-func (d devClient) Sign(ctx context.Context, req *structs.SignParameters) (*structs.SignResponse, error) {
+func (d *devClient) Sign(ctx context.Context, req *structs.SignParameters) (*structs.SignResponse, error) {
+	req.EngineName = defaultEngine
 	signature, err := d.transit.Sign(ctx, req)
 	if err != nil {
 		log.Errorf("Error generating sign: %v", err)
@@ -185,10 +191,15 @@ func (d devClient) Sign(ctx context.Context, req *structs.SignParameters) (*stru
 	return signature, err
 }
 
-func (d devClient) VerifySigned(ctx context.Context, req *structs.VerificationRequest) (*structs.VerificationResponse, error) {
+func (d *devClient) VerifySigned(ctx context.Context, req *structs.VerificationRequest) (*structs.VerificationResponse, error) {
+	req.EngineName = defaultEngine
 	verificationResult, err := d.transit.VerifySign(ctx, req)
 	if err != nil {
 		log.Errorf("Error validating signature %v", err)
 	}
 	return verificationResult, err
+}
+
+func (d *devClient) Health(ctx context.Context, req *structs.HealthRequest) (*structs.HealthResponse, error) {
+	return d.health.Check(ctx), nil
 }

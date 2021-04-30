@@ -29,11 +29,11 @@ func TestOverAll(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, keyName, key.Key.Name, "create key")
 
-	readKey, err := client.ReadKey(ctx, keyName, engineName)
+	readKey, err := client.ReadKey(ctx, keyName)
 	assert.NoError(t, err)
 	assert.Equal(t, key.Key.Name, readKey.Key.Name, "read key")
 
-	keys, err := client.ListKeys(ctx, engineName)
+	keys, err := client.ListKeys(ctx)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(keys.Keys), "keys length")
 	assert.Equal(t, keyName, keys.Keys[0].Name)
