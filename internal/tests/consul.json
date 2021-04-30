@@ -1,0 +1,22 @@
+{
+  "datacenter": "dc-example",
+  "data_dir": "/consul/data",
+  "log_level": "DEBUG",
+  "node_name": "dc-master",
+  "server": true,
+  "bootstrap_expect": 1,
+  "client_addr": "0.0.0.0",
+  "ui" : true,
+  "acl_datacenter": "dc-example",
+  "acl_master_token": "89C2B840-CDE0-4E77-ACAF-73EABB7A489B",
+  "acl_default_policy": "deny",
+  "acl_down_policy": "extend-cache",
+  "ports": {
+    "dns": 8600,
+    "http": 8500,
+    "https": -1,
+    "serf_lan": 8301,
+    "serf_wan": 8302,
+    "server": 8300
+  }
+}

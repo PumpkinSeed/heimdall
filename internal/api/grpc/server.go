@@ -7,6 +7,7 @@ import (
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/transit"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/utils"
+	"github.com/PumpkinSeed/heimdall/pkg/healthcheck"
 	"github.com/PumpkinSeed/heimdall/pkg/structs"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -26,12 +27,14 @@ func Serve(addr string) error {
 
 type server struct {
 	transit transit.Transit
+	health  healthcheck.Healthcheck
 	structs.UnimplementedEncryptionServer
 }
 
-func newServer(b *unseal.Unseal) server {
+func newServer(u *unseal.Unseal) server {
 	return server{
-		transit: transit.New(b),
+		transit: transit.New(u),
+		health:  healthcheck.New(u),
 	}
 }
 
@@ -166,4 +169,8 @@ func (s server) VerifySigned(ctx context.Context, req *structs.VerificationReque
 		log.Errorf("Error validating signature %v", err)
 	}
 	return verificationResult, err
+}
+
+func (s server) Health(ctx context.Context, req *structs.HealthRequest) (*structs.HealthResponse, error) {
+	return s.health.Check(ctx), nil
 }

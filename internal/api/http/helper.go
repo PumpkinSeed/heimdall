@@ -1,4 +1,4 @@
-package rest
+package http
 
 import (
 	"encoding/json"
@@ -30,5 +30,4 @@ func successResponse(w http.ResponseWriter, v interface{}) {
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
 }

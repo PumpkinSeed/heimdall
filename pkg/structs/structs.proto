@@ -16,6 +16,8 @@ service Encryption {
 
     rpc Sign (SignParameters) returns (SignResponse);
     rpc VerifySigned (VerificationRequest) returns (VerificationResponse);
+
+    rpc Health(HealthRequest) returns (HealthResponse);
 }
 
 message Empty {
@@ -97,6 +99,7 @@ message HashRequest {
     HashType algorithm = 1;
     string input = 2;
     string format = 3;
+    string engineName = 4;
 }
 
 message HashResponse {
@@ -145,4 +148,13 @@ message VerificationRequest {
 
 message VerificationResponse {
     bool verificationResult = 1;
+}
+
+message HealthRequest {
+    string address = 1;
+}
+
+message HealthResponse {
+    string status = 1;
+    string message = 2;
 }

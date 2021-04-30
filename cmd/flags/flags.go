@@ -8,7 +8,7 @@ const (
 	NameLogAdditional = "log-additional"
 
 	NameGrpc              = "grpc"
-	NameRest              = "rest"
+	NameHttp              = "http"
 	NameSocket            = "socket"
 	NameThreshold         = "threshold"
 	NameTotalShares       = "total-shares"
@@ -16,9 +16,11 @@ const (
 	NameConsulAddress     = "consul-address"
 	NameConsulToken       = "consul-token"
 	NameInMemory          = "in-memory"
+	NameDisableHttp       = "disable-http"
+	NameDisableGrpc       = "disable-grpc"
 
 	grpcDefaultAddr    = "0.0.0.0:9090"
-	restDefaultAddr    = "0.0.0.0:8080"
+	httpDefaultAddr    = "0.0.0.0:8080"
 	socketDefaultPath  = "/tmp/heimdall.sock"
 	thresholdDefault   = 3
 	totalSharesDefault = 5
@@ -44,10 +46,10 @@ var (
 		Usage: "Starts grpc server and listen on specified address",
 		Value: grpcDefaultAddr,
 	}
-	Rest = &cli.StringFlag{
-		Name:  NameRest,
+	HTTP = &cli.StringFlag{
+		Name:  NameHttp,
 		Usage: "Starts HTTP server and listen on specified address",
-		Value: restDefaultAddr,
+		Value: httpDefaultAddr,
 	}
 	Socket = &cli.StringFlag{
 		Name:  NameSocket,
@@ -85,6 +87,18 @@ var (
 	InMemory = &cli.BoolFlag{
 		Name:  NameInMemory,
 		Usage: "Starts the server with in memory physical backend for development",
+		Value: false,
+	}
+
+	DisableGrpc = &cli.BoolFlag{
+		Name:  NameDisableGrpc,
+		Usage: "",
+		Value: false,
+	}
+
+	DisableHttp = &cli.BoolFlag{
+		Name:  NameDisableHttp,
+		Usage: "",
 		Value: false,
 	}
 )

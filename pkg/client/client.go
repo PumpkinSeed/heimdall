@@ -25,4 +25,5 @@ type Client interface {
 	GenerateHMAC(ctx context.Context, hmac *structs.HMACRequest) (*structs.HMACResponse, error)
 	Sign(ctx context.Context, in *structs.SignParameters) (*structs.SignResponse, error)
 	VerifySigned(ctx context.Context, in *structs.VerificationRequest) (*structs.VerificationResponse, error)
+	Health(ctx context.Context, in *structs.HealthRequest) (*structs.HealthResponse, error)
 }
