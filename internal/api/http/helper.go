@@ -21,6 +21,7 @@ func bind(r *http.Request, v interface{}) error {
 }
 
 func successResponse(w http.ResponseWriter, v interface{}) {
+	w.Header().Add("Content-type", "application/json")
 	result, err := json.Marshal(v)
 	if err != nil {
 		http.Error(w, "internal server error: "+err.Error(), http.StatusInternalServerError)
