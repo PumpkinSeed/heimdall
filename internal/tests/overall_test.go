@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -63,7 +62,7 @@ func TestEncrypt(t *testing.T) {
 		Data: data,
 	})
 
-	fmt.Println(string(resp))
+	log.Println(string(resp))
 	type Result struct {
 		SecretShares []string
 		RootToken    string
@@ -98,7 +97,7 @@ func TestEncrypt(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	fmt.Println(keyResp)
+	log.Println(keyResp)
 
 	plaintext := "test"
 	mes := time.Now()
@@ -109,7 +108,7 @@ func TestEncrypt(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	fmt.Println("Encrypt time: " + time.Since(mes).String())
+	log.Println("Encrypt time: " + time.Since(mes).String())
 
 	mes = time.Now()
 	decryptResult, err := hc.Decrypt(context.Background(), &externalStructs.DecryptRequest{
@@ -119,7 +118,7 @@ func TestEncrypt(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	fmt.Println("Decrypt time: " + time.Since(mes).String())
+	log.Println("Decrypt time: " + time.Since(mes).String())
 	if decryptResult.Result != plaintext {
 		t.Errorf("Decrypted result should be %s, instead of %s", plaintext, decryptResult.Result)
 	}
@@ -134,6 +133,6 @@ func TestEncrypt(t *testing.T) {
 			t.Error(err)
 		}
 	}
-	fmt.Println("Encrypt 100 time: " + time.Since(mes).String())
+	log.Println("Encrypt 100 time: " + time.Since(mes).String())
 	//<- done
 }
