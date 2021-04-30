@@ -34,7 +34,7 @@ type server struct {
 func newServer(u *unseal.Unseal) server {
 	return server{
 		transit: transit.New(u),
-		health: healthcheck.New(u),
+		health:  healthcheck.New(u),
 	}
 }
 
