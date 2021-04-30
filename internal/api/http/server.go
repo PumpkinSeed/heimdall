@@ -76,6 +76,7 @@ func (s *server) Init() {
 }
 
 func (s server) CreateKey(w http.ResponseWriter, r *http.Request) {
+	log.Println(r)
 	ctx := r.Context()
 	var req structs.Key
 	if err := bind(r, &req); err != nil {
