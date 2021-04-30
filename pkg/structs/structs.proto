@@ -99,6 +99,7 @@ message HashRequest {
     HashType algorithm = 1;
     string input = 2;
     string format = 3;
+    string engineName = 4;
 }
 
 message HashResponse {
@@ -150,6 +151,7 @@ message VerificationResponse {
 }
 
 message HealthRequest {
+    string address = 1;
 }
 
 message HealthResponse {
