@@ -2,12 +2,13 @@ package token
 
 import (
 	"context"
+	"sync"
+
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/vault"
-	"sync"
 )
 
 // tokenSubPath is the sub-path used for the token store
@@ -49,6 +50,8 @@ type TokenStore struct {
 
 	saltLock   sync.RWMutex
 	tokenLocks []*locksutil.LockEntry
+
+	cache sync.Map
 }
 
 func NewTokenStore(u *unseal.Unseal) *TokenStore {
@@ -61,10 +64,16 @@ func NewTokenStore(u *unseal.Unseal) *TokenStore {
 		parentBarrierView:   view.SubView(parentPrefix),
 		saltLock:            sync.RWMutex{},
 		tokenLocks:          locksutil.CreateLocks(),
+		cache:               sync.Map{},
 	}
 }
 
 func (ts *TokenStore) CheckToken(ctx context.Context, id string) (bool, error) {
+	if _,found := ts.cache.Load(id); found {
+		return true, nil
+	}
+
+	var found bool
 	tokenNS, err := ts.NamespaceByID(ctx, namespace.RootNamespaceID)
 	if err != nil {
 		return false, err
@@ -77,5 +86,10 @@ func (ts *TokenStore) CheckToken(ctx context.Context, id string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return ret != nil, nil
+	found = ret != nil
+	if found && ret.ID != "" {
+		ts.cache.Store(ret.ID, struct {}{})
+	}
+
+	return found, nil
 }
