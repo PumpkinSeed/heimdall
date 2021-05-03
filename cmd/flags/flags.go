@@ -18,7 +18,8 @@ const (
 	NameInMemory           = "in-memory"
 	NameDisableHttp        = "disable-http"
 	NameDisableGrpc        = "disable-grpc"
-	NameTokenID           = "token-id"
+	NameTokenID            = "token-id"
+	NameRootTokenID        = "root-token-id"
 
 	grpcDefaultAddr    = "0.0.0.0:9090"
 	httpDefaultAddr    = "0.0.0.0:8080"
@@ -102,8 +103,12 @@ var (
 		Usage: "",
 		Value: false,
 	}
-	TokenId = &cli.StringFlag{
+	TokenID = &cli.StringFlag{
 		Name:  NameTokenID,
 		Usage: "Add custom token ID",
+	}
+	RootTokenID = &cli.StringFlag{
+		Name:  NameRootTokenID,
+		Usage: "Previously got root token id",
 	}
 )

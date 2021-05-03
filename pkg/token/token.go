@@ -33,7 +33,8 @@ var (
 )
 
 type Request struct {
-	ID string `json:"id,omitempty"`
+	ID          string `json:"id,omitempty"`
+	RootTokenID string `json:"root_token_id"`
 }
 
 type Response struct {

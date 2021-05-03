@@ -10,6 +10,8 @@ import (
 	"github.com/PumpkinSeed/heimdall/pkg/token"
 )
 
+const msgInvalidRootTokenID = "invalid root token id"
+
 type TokenCreate struct {
 	state      *unseal.Unseal
 	tokenStore *token.TokenStore
@@ -29,6 +31,13 @@ func (t TokenCreate) Handler(ctx context.Context, req structs.SocketRequest) (st
 	var token token.Request
 	if err := json.Unmarshal(req.Data, &token); err != nil {
 		return structs.SocketResponse{}, err
+	}
+	if rootTokenValid, err := t.tokenStore.CheckToken(ctx, token.RootTokenID); err != nil {
+		return structs.SocketResponse{}, err
+	} else if !rootTokenValid {
+		return structs.SocketResponse{
+			Data: []byte(msgInvalidRootTokenID),
+		}, nil
 	}
 	rootToken, err := t.tokenStore.GenRootToken(ctx, token.ID)
 	data, err := json.Marshal(rootToken)

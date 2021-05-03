@@ -31,7 +31,7 @@ var Cmd = &cli.Command{
 		flags.DefaultEnginePath,
 		flags.DisableGrpc,
 		flags.DisableHttp,
-		flags.TokenId,
+		flags.TokenID,
 	},
 }
 

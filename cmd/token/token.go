@@ -15,13 +15,16 @@ var Cmd = &cli.Command{
 	Action: action,
 	Flags: []cli.Flag{
 		flags.Socket,
-		flags.TokenId,
+		flags.TokenID,
+		flags.RootTokenID,
 	},
+
 }
 
 func action(ctx *cli.Context) error {
 	req := token.Request{
-		ID: ctx.String(flags.NameTokenID),
+		ID:          ctx.String(flags.NameTokenID),
+		RootTokenID: ctx.String(flags.NameRootTokenID),
 	}
 	data, err := json.Marshal(req)
 	if err != nil {
