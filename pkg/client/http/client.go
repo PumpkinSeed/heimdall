@@ -19,17 +19,14 @@ const defaultEnginePath = "transit/"
 
 type Options struct {
 	*api.Config
-	EngineName string
 	URLs       []string
+	EngineName string
 	Token      string
 }
 
 func (o *Options) Setup() client.Client {
 	if o.Config == nil {
 		o.Config = api.DefaultConfig()
-	}
-	if len(o.URLs) != len(o.Token) {
-		panic("missing client token")
 	}
 	c := proxyClient{o: *o}
 	vaultClient, _ := api.NewClient(o.Config)
