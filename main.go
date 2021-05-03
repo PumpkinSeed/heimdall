@@ -19,6 +19,7 @@ var app = cli.App{
 		initcommand.Cmd,
 	},
 	Flags: []cli.Flag{
+		flags.Quiet,
 		flags.Verbose,
 		flags.LogOutput,
 		flags.LogAdditional,
