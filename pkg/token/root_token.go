@@ -48,17 +48,15 @@ func (ts *TokenStore) GenRootToken(ctx context.Context, id string) (*logical.Tok
 	// In case it was default, force to service
 	te.Type = logical.TokenTypeService
 
-	if id != "" {
+	if id == "" {
 		te.ID, err = base62.RandomWithReader(tokenLength, rand.Reader)
+		if err != nil {
+			return nil, err
+		}
+		te.ID = fmt.Sprintf("s.%s", te.ID)
 	} else {
 		te.ID = id
 	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	te.ID = fmt.Sprintf("s.%s", te.ID)
 
 	// Attach namespace ID for tokens that are not belonging to the root
 	// namespace
