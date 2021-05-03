@@ -10,6 +10,7 @@ import (
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/utils"
 	"github.com/PumpkinSeed/heimdall/pkg/healthcheck"
 	"github.com/PumpkinSeed/heimdall/pkg/structs"
+	"github.com/PumpkinSeed/heimdall/pkg/token"
 	"github.com/go-chi/chi/v5"
 	log "github.com/sirupsen/logrus"
 )
@@ -27,6 +28,7 @@ type server struct {
 	*chi.Mux
 	transit transit.Transit
 	health  healthcheck.Healthcheck
+	ts      *token.TokenStore
 }
 
 func newServer(u *unseal.Unseal) EncryptionServer {
@@ -34,6 +36,7 @@ func newServer(u *unseal.Unseal) EncryptionServer {
 		Mux:     chi.NewRouter(),
 		transit: transit.New(u),
 		health:  healthcheck.New(u),
+		ts:      token.NewTokenStore(u),
 	}
 }
 
@@ -57,10 +60,29 @@ func (s server) checkSecretEngineExists(next http.Handler) http.Handler {
 	})
 }
 
+func (s *server) checkToken(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		token := r.Header.Get("token")
+		found, err := s.ts.CheckToken(r.Context(), token)
+		if err != nil {
+			log.Errorf("%v", err)
+			http.Error(w, "please provide valid token", http.StatusBadRequest)
+			return
+		}
+		if !found {
+			log.Errorf("token not found %s", token)
+			http.Error(w, "please provide valid token", http.StatusBadRequest)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func (s *server) Init() {
 	s.Get("/health", s.Health)
 	s.Route("/{engineName:^[0-9a-v]+$}", func(r chi.Router) {
 		r.Use(s.checkSecretEngineExists)
+		r.Use(s.checkToken)
 		r.Post("/key", s.CreateKey)
 		r.Get("/key", s.ListKeys)
 		r.Get("/key/{key}", s.ReadKey)

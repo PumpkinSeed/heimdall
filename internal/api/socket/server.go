@@ -21,6 +21,7 @@ type Server interface {
 func initServers(u *unseal.Unseal) {
 	servers[structs.SocketUnseal] = services.NewUnseal(u)
 	servers[structs.SocketInit] = services.NewInit(u)
+	servers[structs.TokenCreate] = services.NewTokenCreate(u)
 }
 
 func Serve(addr string) error {

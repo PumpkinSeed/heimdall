@@ -19,12 +19,16 @@ const defaultEnginePath = "transit/"
 
 type Options struct {
 	*api.Config
-	URLs []string
+	URLs  []string
+	Token []string
 }
 
 func (o *Options) Setup() client.Client {
 	if o.Config == nil {
 		o.Config = api.DefaultConfig()
+	}
+	if len(o.URLs) != len(o.Token) {
+		panic("missing client token")
 	}
 	c := proxyClient{o: *o}
 	vaultClient, _ := api.NewClient(o.Config)
@@ -32,11 +36,14 @@ func (o *Options) Setup() client.Client {
 		c.cs = []*httpClient{{vaultClient}}
 	} else {
 		cs := make([]*httpClient, 0, len(o.URLs))
-		for _, url := range o.URLs {
+		for i, url := range o.URLs {
 			o.Config.Address = url
 			duplicate, err := vaultClient.Clone()
 			if err != nil {
 				panic(err)
+			}
+			if o.Token[i] != "" {
+				duplicate.AddHeader("token", o.Token[i])
 			}
 			cs = append(cs, &httpClient{duplicate})
 		}

@@ -16,6 +16,7 @@ const (
 	NameConsulAddress     = "consul-address"
 	NameConsulToken       = "consul-token"
 	NameInMemory          = "in-memory"
+	NameTokenID           = "id"
 
 	grpcDefaultAddr    = "0.0.0.0:9090"
 	httpDefaultAddr    = "0.0.0.0:8080"
@@ -86,5 +87,9 @@ var (
 		Name:  NameInMemory,
 		Usage: "Starts the server with in memory physical backend for development",
 		Value: false,
+	}
+	TokenId = &cli.StringFlag{
+		Name:  NameTokenID,
+		Usage: "Add custom token ID",
 	}
 )

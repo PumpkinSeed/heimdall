@@ -7,6 +7,7 @@ import (
 	"github.com/PumpkinSeed/heimdall/cmd/flags"
 	initcommand "github.com/PumpkinSeed/heimdall/cmd/init"
 	"github.com/PumpkinSeed/heimdall/cmd/server"
+	"github.com/PumpkinSeed/heimdall/cmd/token"
 	"github.com/PumpkinSeed/heimdall/cmd/unseal"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -17,6 +18,7 @@ var app = cli.App{
 		server.Cmd,
 		unseal.Cmd,
 		initcommand.Cmd,
+		token.Cmd,
 	},
 	Flags: []cli.Flag{
 		flags.Verbose,

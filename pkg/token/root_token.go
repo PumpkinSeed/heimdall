@@ -1,4 +1,4 @@
-package init
+package token
 
 import (
 	"context"
@@ -19,11 +19,13 @@ import (
 )
 
 const (
+	tokenLength = 24
+
 	rootTokenEntryPath = "auth/token/root"
 	rootTokenPolicy    = "root"
 )
 
-func (init *Init) getRootToken(ctx context.Context) (*logical.TokenEntry, error) {
+func (ts *TokenStore) GenRootToken(ctx context.Context, id string) (*logical.TokenEntry, error) {
 	ctx = namespace.ContextWithNamespace(ctx, namespace.RootNamespace)
 	te := &logical.TokenEntry{
 		Policies:     []string{rootTokenPolicy},
@@ -33,7 +35,7 @@ func (init *Init) getRootToken(ctx context.Context) (*logical.TokenEntry, error)
 		NamespaceID:  namespace.RootNamespaceID,
 		Type:         logical.TokenTypeService,
 	}
-	tokenNS, err := init.NamespaceByID(ctx, te.NamespaceID)
+	tokenNS, err := ts.NamespaceByID(ctx, te.NamespaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +48,11 @@ func (init *Init) getRootToken(ctx context.Context) (*logical.TokenEntry, error)
 	// In case it was default, force to service
 	te.Type = logical.TokenTypeService
 
-	te.ID, err = base62.RandomWithReader(TokenLength, rand.Reader)
+	if id != "" {
+		te.ID, err = base62.RandomWithReader(tokenLength, rand.Reader)
+	} else {
+		te.ID = id
+	}
 
 	if err != nil {
 		return nil, err
@@ -62,7 +68,7 @@ func (init *Init) getRootToken(ctx context.Context) (*logical.TokenEntry, error)
 
 	if tokenNS.ID != namespace.RootNamespaceID || strings.HasPrefix(te.ID, "s.") {
 		if te.CubbyholeID == "" {
-			cubbyholeID, err := base62.Random(TokenLength)
+			cubbyholeID, err := base62.Random(tokenLength)
 			if err != nil {
 				return nil, err
 			}
@@ -70,33 +76,33 @@ func (init *Init) getRootToken(ctx context.Context) (*logical.TokenEntry, error)
 		}
 	}
 
-	err = init.createAccessor(ctx, te)
+	err = ts.createAccessor(ctx, te)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := init.storeCommon(ctx, te, true); err != nil {
+	if err := ts.storeCommon(ctx, te, true); err != nil {
 		return nil, err
 	}
 	return te, nil
 }
 
-func (init *Init) NamespaceByID(ctx context.Context, id string) (*namespace.Namespace, error) {
+func (ts *TokenStore) NamespaceByID(ctx context.Context, id string) (*namespace.Namespace, error) {
 	if id == namespace.RootNamespaceID {
 		return namespace.RootNamespace, nil
 	}
 	return nil, namespace.ErrNoNamespace
 }
 
-func (init *Init) createAccessor(ctx context.Context, entry *logical.TokenEntry) error {
+func (ts *TokenStore) createAccessor(ctx context.Context, entry *logical.TokenEntry) error {
 	var err error
 	// Create a random accessor
-	entry.Accessor, err = base62.Random(TokenLength)
+	entry.Accessor, err = base62.Random(tokenLength)
 	if err != nil {
 		return err
 	}
 
-	tokenNS, err := init.NamespaceByID(ctx, entry.NamespaceID)
+	tokenNS, err := ts.NamespaceByID(ctx, entry.NamespaceID)
 	if err != nil {
 		return err
 	}
@@ -110,7 +116,7 @@ func (init *Init) createAccessor(ctx context.Context, entry *logical.TokenEntry)
 
 	// Create index entry, mapping the accessor to the token ID
 	saltCtx := namespace.ContextWithNamespace(ctx, tokenNS)
-	saltID, err := init.SaltID(saltCtx, entry.Accessor)
+	saltID, err := ts.SaltID(saltCtx, entry.Accessor)
 	if err != nil {
 		return err
 	}
@@ -127,14 +133,14 @@ func (init *Init) createAccessor(ctx context.Context, entry *logical.TokenEntry)
 	}
 
 	le := &logical.StorageEntry{Key: saltID, Value: aEntryBytes}
-	if err := init.accessorBarrierView.Put(ctx, le); err != nil {
+	if err := ts.accessorBarrierView.Put(ctx, le); err != nil {
 		return fmt.Errorf("failed to persist accessor index entry: %w", err)
 	}
 	return nil
 
 }
 
-func (init *Init) lookupInternal(ctx context.Context, id string, salted, tainted bool) (*logical.TokenEntry, error) {
+func (ts *TokenStore) lookupInternal(ctx context.Context, id string, salted, tainted bool) (*logical.TokenEntry, error) {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find namespace in context: %w", err)
@@ -153,7 +159,7 @@ func (init *Init) lookupInternal(ctx context.Context, id string, salted, tainted
 		// the request namespace, ensure the request namespace is a child
 		_, nsID := namespace.SplitIDFromString(id)
 		if nsID != "" {
-			tokenNS, err := init.NamespaceByID(ctx, nsID)
+			tokenNS, err := ts.NamespaceByID(ctx, nsID)
 			if err != nil {
 				return nil, fmt.Errorf("failed to look up namespace from the token: %w", err)
 			}
@@ -171,13 +177,13 @@ func (init *Init) lookupInternal(ctx context.Context, id string, salted, tainted
 			ctx = namespace.ContextWithNamespace(ctx, ns)
 		}
 
-		lookupID, err = init.SaltID(ctx, id)
+		lookupID, err = ts.SaltID(ctx, id)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	raw, err = init.idBarrierView.Get(ctx, lookupID)
+	raw, err = ts.idBarrierView.Get(ctx, lookupID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read entry: %w", err)
 	}
@@ -249,7 +255,7 @@ func (init *Init) lookupInternal(ctx context.Context, id string, salted, tainted
 	if len(entry.Policies) == 1 && entry.Policies[0] == "root" && entry.TTL == 0 {
 		// If fields are getting upgraded, store the changes
 		if persistNeeded {
-			if err := init.store(ctx, entry); err != nil {
+			if err := ts.store(ctx, entry); err != nil {
 				return nil, fmt.Errorf("failed to persist token upgrade: %w", err)
 			}
 		}
@@ -260,7 +266,7 @@ func (init *Init) lookupInternal(ctx context.Context, id string, salted, tainted
 
 	// If fields are getting upgraded, store the changes
 	if persistNeeded {
-		if err := init.store(ctx, entry); err != nil {
+		if err := ts.store(ctx, entry); err != nil {
 			return nil, fmt.Errorf("failed to persist token upgrade: %w", err)
 		}
 	}
@@ -268,13 +274,13 @@ func (init *Init) lookupInternal(ctx context.Context, id string, salted, tainted
 	return ret, nil
 }
 
-func (init *Init) SaltID(ctx context.Context, id string) (string, error) {
+func (ts *TokenStore) SaltID(ctx context.Context, id string) (string, error) {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return "", namespace.ErrNoNamespace
 	}
 
-	s, err := init.Salt(ctx)
+	s, err := ts.Salt(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -291,41 +297,41 @@ func (init *Init) SaltID(ctx context.Context, id string) (string, error) {
 	return "h" + s.GetHMAC(id), nil
 }
 
-func (init *Init) Salt(ctx context.Context) (*salt.Salt, error) {
+func (ts *TokenStore) Salt(ctx context.Context) (*salt.Salt, error) {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	init.saltLock.RLock()
-	if salt, ok := init.salts[ns.ID]; ok {
-		defer init.saltLock.RUnlock()
+	ts.saltLock.RLock()
+	if salt, ok := ts.salts[ns.ID]; ok {
+		defer ts.saltLock.RUnlock()
 		return salt, nil
 	}
-	init.saltLock.RUnlock()
-	init.saltLock.Lock()
-	defer init.saltLock.Unlock()
-	if salt, ok := init.salts[ns.ID]; ok {
+	ts.saltLock.RUnlock()
+	ts.saltLock.Lock()
+	defer ts.saltLock.Unlock()
+	if salt, ok := ts.salts[ns.ID]; ok {
 		return salt, nil
 	}
 
-	salt, err := salt.NewSalt(ctx, init.baseBarrierView, &salt.Config{
+	salt, err := salt.NewSalt(ctx, ts.baseBarrierView, &salt.Config{
 		HashFunc: salt.SHA1Hash,
 		Location: salt.DefaultLocation,
 	})
 	if err != nil {
 		return nil, err
 	}
-	init.salts[ns.ID] = salt
+	ts.salts[ns.ID] = salt
 	return salt, nil
 }
 
-func (init *Init) store(ctx context.Context, entry *logical.TokenEntry) error {
-	return init.storeCommon(ctx, entry, false)
+func (ts *TokenStore) store(ctx context.Context, entry *logical.TokenEntry) error {
+	return ts.storeCommon(ctx, entry, false)
 }
 
-func (init *Init) storeCommon(ctx context.Context, entry *logical.TokenEntry, writeSecondary bool) error {
-	tokenNS, err := init.NamespaceByID(ctx, entry.NamespaceID)
+func (ts *TokenStore) storeCommon(ctx context.Context, entry *logical.TokenEntry, writeSecondary bool) error {
+	tokenNS, err := ts.NamespaceByID(ctx, entry.NamespaceID)
 	if err != nil {
 		return err
 	}
@@ -334,7 +340,7 @@ func (init *Init) storeCommon(ctx context.Context, entry *logical.TokenEntry, wr
 	}
 
 	saltCtx := namespace.ContextWithNamespace(ctx, tokenNS)
-	saltedID, err := init.SaltID(saltCtx, entry.ID)
+	saltedID, err := ts.SaltID(saltCtx, entry.ID)
 	if err != nil {
 		return err
 	}
@@ -352,7 +358,7 @@ func (init *Init) storeCommon(ctx context.Context, entry *logical.TokenEntry, wr
 		// escaping the revocation chain.
 		if entry.Parent != "" {
 			// Ensure the parent exists
-			parent, err := init.Lookup(ctx, entry.Parent)
+			parent, err := ts.Lookup(ctx, entry.Parent)
 			if err != nil {
 				return fmt.Errorf("failed to lookup parent: %w", err)
 			}
@@ -360,7 +366,7 @@ func (init *Init) storeCommon(ctx context.Context, entry *logical.TokenEntry, wr
 				return errors.New("parent token not found")
 			}
 
-			parentNS, err := init.NamespaceByID(ctx, parent.NamespaceID)
+			parentNS, err := ts.NamespaceByID(ctx, parent.NamespaceID)
 			if err != nil {
 				return err
 			}
@@ -371,7 +377,7 @@ func (init *Init) storeCommon(ctx context.Context, entry *logical.TokenEntry, wr
 			parentCtx := namespace.ContextWithNamespace(ctx, parentNS)
 
 			// Create the index entry
-			parentSaltedID, err := init.SaltID(parentCtx, entry.Parent)
+			parentSaltedID, err := ts.SaltID(parentCtx, entry.Parent)
 			if err != nil {
 				return err
 			}
@@ -382,7 +388,7 @@ func (init *Init) storeCommon(ctx context.Context, entry *logical.TokenEntry, wr
 			}
 
 			le := &logical.StorageEntry{Key: path}
-			if err := init.parentBarrierView.Put(ctx, le); err != nil {
+			if err := ts.parentBarrierView.Put(ctx, le); err != nil {
 				return fmt.Errorf("failed to persist entry: %w", err)
 			}
 		}
@@ -393,13 +399,13 @@ func (init *Init) storeCommon(ctx context.Context, entry *logical.TokenEntry, wr
 	if len(entry.Policies) == 1 && entry.Policies[0] == "root" {
 		le.SealWrap = true
 	}
-	if err := init.idBarrierView.Put(ctx, le); err != nil {
+	if err := ts.idBarrierView.Put(ctx, le); err != nil {
 		return fmt.Errorf("failed to persist entry: %w", err)
 	}
 	return nil
 }
 
-func (init *Init) Lookup(ctx context.Context, id string) (*logical.TokenEntry, error) {
+func (ts *TokenStore) Lookup(ctx context.Context, id string) (*logical.TokenEntry, error) {
 	if id == "" {
 		return nil, errors.New("cannot lookup blank token")
 	}
@@ -409,11 +415,11 @@ func (init *Init) Lookup(ctx context.Context, id string) (*logical.TokenEntry, e
 		return nil, nil
 	}
 
-	lock := locksutil.LockForKey(init.tokenLocks, id)
+	lock := locksutil.LockForKey(ts.tokenLocks, id)
 	lock.RLock()
 	defer lock.RUnlock()
 
-	return init.lookupInternal(ctx, id, false, false)
+	return ts.lookupInternal(ctx, id, false, false)
 }
 
 type accessorEntry struct {
