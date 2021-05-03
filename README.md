@@ -59,7 +59,7 @@ heimdall unseal {{KEY2}}
 heimdall unseal {{KEY3}}
 ```
 
-Provide all flag scenario:
+Provide all flags scenario:
 
 ```
 // tty1
