@@ -17,7 +17,7 @@ func Create(ctx *cli.Context) (physical.Backend, error) {
 		return inmem.NewInmem(nil, logger.Of(log.StandardLogger()))
 	}
 	return consul.NewConsulBackend(map[string]string{
-		"address": ctx.String(flags.NameConsulAddress),
-		"token":   ctx.String(flags.NameConsulToken),
+		"address": ctx.String(flags.NameBackendAddress),
+		"token":   ctx.String(flags.NameBackendCredentials),
 	}, logger.Of(log.StandardLogger()))
 }
