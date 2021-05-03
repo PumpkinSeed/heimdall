@@ -1,11 +1,11 @@
 package common
 
 import (
-	"errors"
 	"log/syslog"
 	"regexp"
 
 	"github.com/PumpkinSeed/heimdall/cmd/flags"
+	"github.com/PumpkinSeed/heimdall/internal/errors"
 	log "github.com/sirupsen/logrus"
 	logrusSyslog "github.com/sirupsen/logrus/hooks/syslog"
 	"github.com/urfave/cli/v2"
@@ -22,7 +22,7 @@ func Before(ctx *cli.Context) error {
 		log.SetLevel(log.DebugLevel)
 	}
 	if err := setupHook(ctx); err != nil {
-		return err
+		return errors.Wrap(err, "hook setup error", errors.CodeCmdCommonBefore)
 	}
 
 	return nil
@@ -33,11 +33,11 @@ func setupHook(ctx *cli.Context) error {
 	case logOutputSyslog:
 		prot, addr, err := bindSyslogAdditional(ctx.String(flags.NameLogAdditional))
 		if err != nil {
-			return err
+			return errors.Wrap(err, "syslog bind error", errors.CodeCmdCommonSetupBind)
 		}
 		hook, err := logrusSyslog.NewSyslogHook(prot, addr, syslog.LOG_INFO, "")
 		if err != nil {
-			return err
+			return errors.Wrap(err, "syslog hook error", errors.CodeCmdCommonSetupSyslogHook)
 		}
 		log.AddHook(hook)
 	}
@@ -55,10 +55,10 @@ func bindSyslogAdditional(data string) (string, string, error) {
 	var addr, network string
 	var ok bool
 	if addr, ok = properties[syslogKeyAddress]; !ok {
-		return "", "", errors.New("missing address from additional")
+		return "", "", errors.New("missing address from additional", errors.CodeCmdCommonSetupBindAddress)
 	}
 	if network, ok = properties[syslogKeyNetwork]; !ok {
-		return "", "", errors.New("missing network type from additional")
+		return "", "", errors.New("missing network type from additional", errors.CodeCmdCommonSetupBindAddress)
 	}
 
 	return addr, network, nil
