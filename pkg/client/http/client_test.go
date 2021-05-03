@@ -10,10 +10,10 @@ import (
 )
 
 func TestClient(t *testing.T) {
-	t.Skip("Skip integration test")
+	//t.Skip("Skip integration test")
 	opt := &Options{
 		URLs:  []string{"http://0.0.0.0:8080", "http://0.0.0.0:8080", "http://0.0.0.0:8080", "http://0.0.0.0:8080", "http://0.0.0.0:8080"},
-		Token: "s.euH6BacvNuz6S8thIY4ITjbV",
+		Token: "9cf43d86-5267-e6c7-4b3a-982035c83328",
 	}
 	client := opt.Setup()
 	ctx := context.Background()

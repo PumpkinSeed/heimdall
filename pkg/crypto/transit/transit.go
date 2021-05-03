@@ -22,7 +22,7 @@ func New(u *unseal.Unseal) Transit {
 	}
 }
 
-func (t Transit) CheckEngine(engineName string) bool {
+func (t Transit) CheckEngine(engineName string) (bool, error) {
 	return t.u.CheckEngine(engineName)
 }
 

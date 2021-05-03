@@ -49,7 +49,11 @@ func (s server) checkSecretEngineExists(next http.Handler) http.Handler {
 			return
 		}
 		engineName := strings.TrimPrefix(m[0], "/")
-		if exists := s.transit.CheckEngine(engineName); !exists {
+		if exists, err := s.transit.CheckEngine(engineName); err != nil {
+			log.Errorf("engine check error: %v", err)
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		} else if !exists {
 			log.Errorf("engine not found: %s", engineName)
 			http.Error(w, "engine not found", http.StatusBadRequest)
 			return
@@ -62,15 +66,15 @@ func (s server) checkSecretEngineExists(next http.Handler) http.Handler {
 
 func (s *server) checkToken(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		token := r.Header.Get("token")
-		found, err := s.ts.CheckToken(r.Context(), token)
+		t := r.Header.Get("token")
+		found, err := s.ts.CheckToken(r.Context(), t)
 		if err != nil {
 			log.Errorf("%v", err)
 			http.Error(w, "please provide valid token", http.StatusBadRequest)
 			return
 		}
 		if !found {
-			log.Errorf("token not found %s", token)
+			log.Errorf("token not found %s", t)
 			http.Error(w, "please provide valid token", http.StatusBadRequest)
 			return
 		}
