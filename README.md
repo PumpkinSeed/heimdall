@@ -37,7 +37,7 @@ There are three commands at the moment. (server, init, unseal)
     - `--default-engine-path`: determine the default secret engine's path if there are multiple engines available (optional, default: `transit/`)
     - `--verbose`: start in verbose mode (optional)
     - `--log-output`: set the output of the log (optional, options.: syslog, stdout)
-    - `--log-additional`: set additional configuration for log (optional, ex.: for syslog: ``)
+    - `--log-additional`: set additional configuration for log (optional, ex.: for syslog: `address=127.0.0.1:4200;network=tcp`)
 - init (initialization phase of Heimdall, do it only once if the system has a physical backend which didn't initialize yet)
     - `--socket`: determine the unix socket location (optional, default: `/tmp/heimdall.sock`)
     - `--threshold`: threshold of the shamir key unseal limit (optional, default: `3`)
@@ -72,7 +72,7 @@ heimdall server \
     --threshold 4 \
     --default-engine-path difftransit/ \
     --log-output syslog \
-    --log-additional ""
+    --log-additional "address=127.0.0.1:4200;network=tcp"
 
 // tty2
 heimdall init \
