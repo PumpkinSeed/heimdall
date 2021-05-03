@@ -66,7 +66,7 @@ func (s server) checkSecretEngineExists(next http.Handler) http.Handler {
 
 func (s *server) checkToken(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		t := r.Header.Get("token")
+		t := r.Header.Get("authorization")
 		found, err := s.ts.CheckToken(r.Context(), t)
 		if err != nil {
 			log.Errorf("%v", err)

@@ -6,6 +6,7 @@ require (
 	github.com/go-chi/chi/v5 v5.0.2
 	github.com/golang/protobuf v1.5.2
 	github.com/gorilla/websocket v1.4.2 // indirect
+	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/hashicorp/go-hclog v0.15.0
 	github.com/hashicorp/go-kms-wrapping v0.5.16
 	github.com/hashicorp/go-uuid v1.0.2

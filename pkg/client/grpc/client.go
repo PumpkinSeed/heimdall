@@ -43,7 +43,7 @@ func buildConnections(o Options) []grpc.ClientConnInterface {
 }
 
 func buildDialOptions(o Options) []grpc.DialOption {
-	var res []grpc.DialOption
+	res := []grpc.DialOption{}
 	if o.TLS {
 		creds, err := credentials.NewClientTLSFromFile(o.CaFile, o.ServerHostOverride)
 		if err != nil {
