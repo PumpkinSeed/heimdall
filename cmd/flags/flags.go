@@ -7,18 +7,18 @@ const (
 	NameLogOutput     = "log-output"
 	NameLogAdditional = "log-additional"
 
-	NameGrpc              = "grpc"
-	NameHttp              = "http"
-	NameSocket            = "socket"
-	NameThreshold         = "threshold"
-	NameTotalShares       = "total-shares"
-	NameDefaultEnginePath = "default-engine-path"
-	NameConsulAddress     = "consul-address"
-	NameConsulToken       = "consul-token"
-	NameInMemory          = "in-memory"
-	NameDisableHttp       = "disable-http"
-	NameDisableGrpc       = "disable-grpc"
-	NameTokenID           = "id"
+	NameGrpc               = "grpc"
+	NameHttp               = "http"
+	NameSocket             = "socket"
+	NameThreshold          = "threshold"
+	NameTotalShares        = "total-shares"
+	NameDefaultEnginePath  = "default-engine-path"
+	NameBackendAddress     = "backend-address"
+	NameBackendCredentials = "backend-credentials"
+	NameInMemory           = "in-memory"
+	NameDisableHttp        = "disable-http"
+	NameDisableGrpc        = "disable-grpc"
+	NameTokenID           = "token-id"
 
 	grpcDefaultAddr    = "0.0.0.0:9090"
 	httpDefaultAddr    = "0.0.0.0:8080"
@@ -78,12 +78,12 @@ var (
 
 	// TODO add flag to handle multiple database types
 	ConsulAddress = &cli.StringFlag{
-		Name:  NameConsulAddress,
-		Usage: "Add consul's connection string here",
+		Name:  NameBackendAddress,
+		Usage: "Add backend connection string here",
 	}
 	ConsulToken = &cli.StringFlag{
-		Name:  NameConsulToken,
-		Usage: "Add consul's access token here",
+		Name:  NameBackendCredentials,
+		Usage: "Add backend credential here",
 	}
 	InMemory = &cli.BoolFlag{
 		Name:  NameInMemory,
