@@ -69,7 +69,7 @@ func NewTokenStore(u *unseal.Unseal) *TokenStore {
 }
 
 func (ts *TokenStore) CheckToken(ctx context.Context, id string) (bool, error) {
-	if _,found := ts.cache.Load(id); found {
+	if _, found := ts.cache.Load(id); found {
 		return true, nil
 	}
 
@@ -88,7 +88,7 @@ func (ts *TokenStore) CheckToken(ctx context.Context, id string) (bool, error) {
 	}
 	found = ret != nil
 	if found && ret.ID != "" {
-		ts.cache.Store(ret.ID, struct {}{})
+		ts.cache.Store(ret.ID, struct{}{})
 	}
 
 	return found, nil

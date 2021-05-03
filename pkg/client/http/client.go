@@ -21,7 +21,7 @@ type Options struct {
 	*api.Config
 	EngineName string
 	URLs       []string
-	Token []string
+	Token      string
 }
 
 func (o *Options) Setup() client.Client {
@@ -33,18 +33,22 @@ func (o *Options) Setup() client.Client {
 	}
 	c := proxyClient{o: *o}
 	vaultClient, _ := api.NewClient(o.Config)
+	if o.Token != "" {
+		vaultClient.AddHeader("token", o.Token)
+	}
+
 	if len(o.URLs) == 0 {
 		c.cs = []*httpClient{{vaultClient}}
 	} else {
 		cs := make([]*httpClient, 0, len(o.URLs))
-		for i, url := range o.URLs {
+		for _, url := range o.URLs {
 			o.Config.Address = url
 			duplicate, err := vaultClient.Clone()
 			if err != nil {
 				panic(err)
 			}
-			if o.Token[i] != "" {
-				duplicate.AddHeader("token", o.Token[i])
+			if o.Token != "" {
+				duplicate.AddHeader("token", o.Token)
 			}
 			cs = append(cs, &httpClient{duplicate})
 		}
