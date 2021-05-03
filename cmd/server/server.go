@@ -68,19 +68,23 @@ func setupEnvironment(ctx *cli.Context) error {
 	u.SetBackend(b)
 	u.SetSecurityBarrier(sb)
 	u.SetDefaultEnginePath(ctx.String(flags.NameDefaultEnginePath))
-	if ctx.Bool(flags.NameInMemory) {
-		if err := u.DevMode(context.Background()); err != nil {
-			return err
-		}
-		if tokenID := ctx.String(flags.NameTokenID); tokenID != "" {
-			tokenResp, err := token.NewTokenStore(u).GenRootToken(context.Background(), tokenID)
-			if err != nil {
-				return err
-			}
-			log.Infof("generated token: %s", tokenResp.ID)
-		}
+
+	return checkAndSetDevMode(ctx, u)
+}
+
+func checkAndSetDevMode(ctx *cli.Context, u *unseal.Unseal) error {
+	if !ctx.Bool(flags.NameInMemory) {
 		return nil
 	}
+	if err := u.DevMode(context.Background()); err != nil {
+		return err
+	}
+
+	tokenResp, err := token.NewTokenStore(u).GenRootToken(context.Background(), ctx.String(flags.NameTokenID))
+	if err != nil {
+		return err
+	}
+	log.Infof("generated token: %s", tokenResp.ID)
 
 	return nil
 }
