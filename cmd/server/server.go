@@ -28,6 +28,8 @@ var Cmd = &cli.Command{
 		flags.ConsulToken,
 		flags.InMemory,
 		flags.DefaultEnginePath,
+		flags.DisableGrpc,
+		flags.DisableHttp,
 	},
 }
 
@@ -38,8 +40,12 @@ func serve(ctx *cli.Context) error {
 		return err
 	}
 
-	serverExecutor(grpc.Serve, ctx.String(flags.NameGrpc), finished)
-	serverExecutor(http.Serve, ctx.String(flags.NameHttp), finished)
+	if !ctx.Bool(flags.NameDisableGrpc) {
+		serverExecutor(grpc.Serve, ctx.String(flags.NameGrpc), finished)
+	}
+	if !ctx.Bool(flags.NameDisableHttp) {
+		serverExecutor(http.Serve, ctx.String(flags.NameHttp), finished)
+	}
 	serverExecutor(socket.Serve, ctx.String(flags.NameSocket), finished)
 
 	<-finished

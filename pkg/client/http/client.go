@@ -19,7 +19,8 @@ const defaultEnginePath = "transit/"
 
 type Options struct {
 	*api.Config
-	URLs  []string
+	EngineName string
+	URLs       []string
 	Token []string
 }
 
@@ -74,42 +75,49 @@ func (c *proxyClient) next() structs.EncryptionClient {
 }
 
 func (c *proxyClient) CreateKey(ctx context.Context, key *structs.Key) (*structs.KeyResponse, error) {
+	key.EngineName = c.o.EngineName
 	return c.next().CreateKey(ctx, key)
 }
 
 func (c *proxyClient) ReadKey(ctx context.Context, keyName string) (*structs.KeyResponse, error) {
-	return c.next().ReadKey(ctx, &structs.KeyName{Name: keyName})
+	return c.next().ReadKey(ctx, &structs.KeyName{Name: keyName, EngineName: c.o.EngineName})
 }
 
 func (c *proxyClient) DeleteKey(ctx context.Context, keyName string) (*structs.KeyResponse, error) {
-	return c.next().DeleteKey(ctx, &structs.KeyName{Name: keyName})
+	return c.next().DeleteKey(ctx, &structs.KeyName{Name: keyName, EngineName: c.o.EngineName})
 }
 
 func (c *proxyClient) ListKeys(ctx context.Context) (*structs.KeyListResponse, error) {
-	return c.next().ListKeys(ctx, &structs.Empty{})
+	return c.next().ListKeys(ctx, &structs.Empty{EngineName: c.o.EngineName})
 }
 
 func (c *proxyClient) Encrypt(ctx context.Context, req *structs.EncryptRequest) (*structs.CryptoResult, error) {
+	req.EngineName = c.o.EngineName
 	return c.next().Encrypt(ctx, req)
 }
 
 func (c *proxyClient) Decrypt(ctx context.Context, req *structs.DecryptRequest) (*structs.CryptoResult, error) {
+	req.EngineName = c.o.EngineName
 	return c.next().Decrypt(ctx, req)
 }
 
 func (c *proxyClient) Hash(ctx context.Context, req *structs.HashRequest) (*structs.HashResponse, error) {
+	req.EngineName = c.o.EngineName
 	return c.next().Hash(ctx, req)
 }
 
 func (c *proxyClient) GenerateHMAC(ctx context.Context, req *structs.HMACRequest) (*structs.HMACResponse, error) {
+	req.EngineName = c.o.EngineName
 	return c.next().GenerateHMAC(ctx, req)
 }
 
 func (c *proxyClient) Sign(ctx context.Context, req *structs.SignParameters) (*structs.SignResponse, error) {
+	req.EngineName = c.o.EngineName
 	return c.next().Sign(ctx, req)
 }
 
 func (c *proxyClient) VerifySigned(ctx context.Context, req *structs.VerificationRequest) (*structs.VerificationResponse, error) {
+	req.EngineName = c.o.EngineName
 	return c.next().VerifySigned(ctx, req)
 }
 
