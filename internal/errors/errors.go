@@ -63,6 +63,12 @@ const (
 	CodeApiHTTPVerifySign             Code = "11_11_"
 	CodeApiHTTPVerifySignEngineName   Code = "11_11_0"
 	CodeApiSocket                     Code = "12"
+	CodeApiSocketBind                 Code = "120"
+	CodeApiSocketBindRead             Code = "1200"
+	CodeApiSocketBindUnmarshal        Code = "1201"
+	CodeApiSocketBindUnknown          Code = "1202"
+	CodeApiSocketWrite                Code = "121"
+	CodeApiSocketHandler              Code = "122"
 )
 
 type Code string

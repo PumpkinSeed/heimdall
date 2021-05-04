@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/PumpkinSeed/heimdall/internal/api/socket/services"
+	"github.com/PumpkinSeed/heimdall/internal/errors"
 	"github.com/PumpkinSeed/heimdall/internal/structs"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	log "github.com/sirupsen/logrus"
@@ -25,12 +26,12 @@ func initServers(u *unseal.Unseal) {
 
 func Serve(addr string) error {
 	if err := os.RemoveAll(addr); err != nil {
-		return err
+		return errors.Wrap(err, "socket remove error", errors.CodeApiSocket)
 	}
 
 	ln, err := net.Listen("unix", addr)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "socket listen error", errors.CodeApiSocket)
 	}
 	log.Infof("Socket listening on %s", addr)
 
@@ -39,9 +40,9 @@ func Serve(addr string) error {
 	for {
 		fd, err := ln.Accept()
 		if err != nil {
-			log.Error("Accept error: ", err)
+			log.Debugf("Accept error: %v", err)
 
-			return err
+			return errors.Wrap(err, "socket listener accept error", errors.CodeApiSocket)
 		}
 
 		serve(fd)
@@ -51,7 +52,8 @@ func Serve(addr string) error {
 func serve(c net.Conn) {
 	req, err := bindInput(c)
 	if err != nil {
-		log.Errorf("error at input binding: %v", err)
+		log.Debugf("error at input binding: %v", err)
+		log.Error(errors.Wrap(err, "socket bind error", errors.CodeApiSocketBind))
 		writeError(c, err)
 
 		return
@@ -59,7 +61,8 @@ func serve(c net.Conn) {
 
 	res, err := servers[req.Type].Handler(context.Background(), req)
 	if err != nil {
-		log.Errorf("error request handling: %v", err)
+		log.Debugf("error request handling: %v", err)
+		log.Error(errors.Wrap(err, "socket request handler error", errors.CodeApiSocketHandler))
 		writeError(c, err)
 		write(c, res.Data)
 
@@ -73,15 +76,15 @@ func bindInput(c net.Conn) (structs.SocketRequest, error) {
 	buf := make([]byte, 512)
 	nr, err := c.Read(buf)
 	if err != nil {
-		return structs.SocketRequest{}, err
+		return structs.SocketRequest{}, errors.Wrap(err, "socket read error", errors.CodeApiSocketBindRead)
 	}
 
 	var req structs.SocketRequest
 	if err := json.Unmarshal(buf[0:nr], &req); err != nil {
-		return structs.SocketRequest{}, err
+		return structs.SocketRequest{}, errors.Wrap(err, "socket unmarshal error", errors.CodeApiSocketBindUnmarshal)
 	}
 	if req.Type == structs.SocketUnknown {
-		return structs.SocketRequest{}, structs.ErrUnknownRequest
+		return structs.SocketRequest{}, errors.Wrap(structs.ErrUnknownRequest, "socket unknown response type error", errors.CodeApiSocketBindUnknown)
 	}
 
 	return req, nil
@@ -98,6 +101,6 @@ func writeStr(c net.Conn, s string) {
 
 func write(c net.Conn, v []byte) {
 	if _, err := c.Write(v); err != nil {
-		log.Error(err)
+		log.Error(errors.NewErr(err, errors.CodeApiSocketWrite))
 	}
 }
