@@ -169,6 +169,16 @@ const (
 	CodePkgCryptoTransitDecryptCiphertextFormat    Code = "3252"
 	CodePkgCryptoTransitDecryptDecodeContextFormat Code = "3253"
 	CodePkgCryptoTransitDecryptNonceFormat         Code = "3254"
+	CodePkgCryptoTransitHash                       Code = "326"
+	CodePkgCryptoTransitHashInputFormat            Code = "3260"
+	CodePkgCryptoTransitHashOutputFormat           Code = "3261"
+	CodePkgCryptoTransitHashAlgorithmFormat        Code = "3262"
+	CodePkgCryptoTransitHMAC                       Code = "327"
+	CodePkgCryptoTransitHMACGetKey                 Code = "3271"
+	CodePkgCryptoTransitHMACKeyVersion             Code = "3272"
+	CodePkgCryptoTransitHMACCompute                Code = "3273"
+	CodePkgCryptoTransitHMACUnsupportedAlgo        Code = "3274"
+	CodePkgCryptoTransitHMACInputFormat            Code = "3275"
 
 	CodePkgHealthcheck Code = "4"
 
