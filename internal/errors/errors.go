@@ -141,6 +141,14 @@ const (
 	CodePkgCryptoKeyringBarrierDecrypt          Code = "306"
 	CodePkgCryptoKeyringDeserialize             Code = "307"
 
+	CodePkgCryptoMount                      Code = "31"
+	CodePkgCryptoMountNotFound              Code = "310"
+	CodePkgCryptoMountTermMisMatch          Code = "311"
+	CodePkgCryptoMountAeadFromKey           Code = "312"
+	CodePkgCryptoMountBarrierDecrypt        Code = "313"
+	CodePkgCryptoMountDecodeTable           Code = "314"
+	CodePkgCryptoMountDecodeTableJsonDecode Code = "3140"
+
 	CodePkgHealthcheck Code = "4"
 
 	CodePkgInit Code = "5"
