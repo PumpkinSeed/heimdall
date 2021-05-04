@@ -217,6 +217,9 @@ const (
 	CodePkgCryptoUnsealPostProcessSBInitialize Code = "3390"
 	CodePkgCryptoUnsealPostProcessSBUnseal     Code = "3391"
 
+	CodePkgCryptoUtils               Code = "34"
+	CodePkgCryptoUtilsBarrierDecrypt Code = "340"
+
 	CodePkgHealthcheck Code = "4"
 
 	CodePkgInit Code = "5"
