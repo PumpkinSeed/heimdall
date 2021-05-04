@@ -111,6 +111,21 @@ const (
 	CodeClientHttpHealthRead         Code = "21_11_1"
 	CodeClientHttpHealthUnmarshal    Code = "21_11_2"
 
+	CodeClientDev                     Code = "22"
+	CodeClientDevSetup                Code = "220"
+	CodeClientDevSetupBarrierPhysical Code = "2201"
+	CodeClientDevSetupBarrierLogical  Code = "2202"
+	CodeClientDevCreateKey            Code = "221"
+	CodeClientDevReadKey              Code = "222"
+	CodeClientDevDeleteKey            Code = "223"
+	CodeClientDevListKeys             Code = "224"
+	CodeClientDevEncrypt              Code = "225"
+	CodeClientDevDecrypt              Code = "226"
+	CodeClientDevHash                 Code = "227"
+	CodeClientDevHmac                 Code = "228"
+	CodeClientDevSign                 Code = "229"
+	CodeClientDevVerifySign           Code = "22_10_"
+
 	CodePkgCrypto Code = "3"
 
 	CodePkgHealthcheck Code = "4"
