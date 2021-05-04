@@ -31,8 +31,8 @@ There are three commands at the moment. (server, init, unseal)
     - `--http`: determine the bind address of http connection (optional, default: `0.0.0.0:8080`)
     - `--socket`: determine the unix socket location (optional, default: `/tmp/heimdall.sock`)
     - `--threshold`: threshold of the shamir key unseal limit (optional, default: `3`)
-    - `--consul-address`: determine the physical backend's address
-    - `--consul-token`: determine the physical backend's credentials
+    - `--backend-address`: determine the physical backend's address
+    - `--backend-credentials`: determine the physical backend's credentials
     - `--in-memory`: starts the server with in-memory backend, so it can run in as a standalone instance (WARNING: insecure)
     - `--default-engine-path`: determine the default secret engine's path if there are multiple engines available (optional, default: `transit/`)
     - `--verbose`: start in verbose mode (optional)
