@@ -24,34 +24,48 @@ const (
 	CodeCmdServerEnvSetupLogical  Code = "0301"
 	CodeCmdServerExecute          Code = "031"
 	CodeCmdUnseal                 Code = "04"
+
+	CodeapiGrpc           Code = "10"
+	CodeApiGrpcCreateKey  Code = "100"
+	CodeApiGrpcReadKey    Code = "101"
+	CodeApiGrpcDeleteKey  Code = "102"
+	CodeApiGrpcListKey    Code = "103"
+	CodeApiGrpcEncrypt    Code = "104"
+	CodeApiGrpcDecrypt    Code = "105"
+	CodeApiGrpcHash       Code = "106"
+	CodeApiGrpcHMAC       Code = "107"
+	CodeApiGrpcSign       Code = "108"
+	CodeApiGrpcVerifySign Code = "109"
+	CodeApiHTTP           Code = "11"
+	CodeApiSocket         Code = "12"
 )
 
 type Code string
 
 func NewErr(err error, code Code) error {
-	return &HeimdallError{
+	return &Error{
 		Msg:   err.Error(),
 		Codes: []string{string(code)},
 	}
 }
 
 func newErr(err error) error {
-	return &HeimdallError{
+	return &Error{
 		Msg: err.Error(),
 	}
 }
 
 func New(errMsg string, code Code) error {
-	return &HeimdallError{
+	return &Error{
 		Msg:   errMsg,
 		Codes: []string{string(code)},
 	}
 }
 
 func Wrap(err error, msg string, code Code) error {
-	if e, ok := err.(*HeimdallError); ok {
+	if e, ok := err.(*Error); ok {
 		if e.Msg != "" {
-			e.Msg += ": " + msg
+			e.Msg += "; " + msg
 		} else {
 			e.Msg = msg
 		}
@@ -63,12 +77,12 @@ func Wrap(err error, msg string, code Code) error {
 	return Wrap(newErr(err), msg, code)
 }
 
-type HeimdallError struct {
+type Error struct {
 	Msg   string
 	Codes []string
 }
 
-func (h *HeimdallError) Error() string {
+func (h *Error) Error() string {
 	sb := strings.Builder{}
 	sb.WriteString("[")
 	sb.WriteString(strings.Join(h.Codes, ","))
