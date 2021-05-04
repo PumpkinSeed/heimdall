@@ -69,6 +69,9 @@ const (
 	CodeApiSocketBindUnknown          Code = "1202"
 	CodeApiSocketWrite                Code = "121"
 	CodeApiSocketHandler              Code = "122"
+	CodeApiSocketInit                 Code = "123"
+	CodeApiSocketInitUnmarshal        Code = "1230"
+	CodeApiSocketInitMarshal          Code = "1231"
 )
 
 type Code string
