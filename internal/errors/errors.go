@@ -77,7 +77,20 @@ const (
 	CodeApiSocketUnsealMount          Code = "1242"
 	CodeApiSocketUnsealPostProcess    Code = "1243"
 
-	CodeClient Code = "2"
+	CodeClient               Code = "2"
+	CodeClientGrpc           Code = "20"
+	CodeClientGrpcDial       Code = "200"
+	CodeClientGrpcTLSError   Code = "201"
+	CodeClientGrpcCreateKey  Code = "202"
+	CodeClientGrpcReadKey    Code = "203"
+	CodeClientGrpcDeleteKey  Code = "204"
+	CodeClientGrpcListKey    Code = "205"
+	CodeClientGrpcEncrypt    Code = "206"
+	CodeClientGrpcDecrypt    Code = "207"
+	CodeClientGrpcHash       Code = "208"
+	CodeClientGrpcHmac       Code = "209"
+	CodeClientGrpcSign       Code = "209"
+	CodeClientGrpcVerifySign Code = "20_10_"
 
 	CodePkgCrypto Code = "3"
 
