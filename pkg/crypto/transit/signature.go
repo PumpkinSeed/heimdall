@@ -4,9 +4,8 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
-	"errors"
-	"fmt"
 
+	"github.com/PumpkinSeed/heimdall/internal/errors"
 	"github.com/PumpkinSeed/heimdall/pkg/structs"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 )
@@ -18,27 +17,27 @@ func (t *Transit) Sign(ctx context.Context, req *structs.SignParameters) (*struc
 	}, rand.Reader)
 
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "transit sign get key error", errors.CodePkgCryptoTransitSignGetKey)
 	}
 	if p == nil {
-		return nil, errors.New("encryption key not found")
+		return nil, errors.New("transit sign encryption key not found", errors.CodePkgCryptoTransitSignKeyNotFound)
 	}
 
 	hashType, err := getVaultHashType(req.HashAlgorithm)
 	if err != nil {
 		p.Unlock()
-		return nil, err
+		return nil, errors.Wrap(err, "transit sign get hash type error", errors.CodePkgCryptoTransitSignKeyHashType)
 	}
 
 	if !p.Type.SigningSupported() {
 		p.Unlock()
-		return nil, fmt.Errorf("key type %v does not support verification", p.Type)
+		return nil, errors.Newf(errors.CodePkgCryptoTransitSignUnsupported, "transit sign key type %v does not support verification", p.Type)
 	}
 
 	input, err := base64.StdEncoding.DecodeString(req.Input)
 	if err != nil {
 		p.Unlock()
-		return nil, fmt.Errorf("unable to decode input as base64: %s", err)
+		return nil, errors.Wrap(err, "transit sign unable to decode input as base64", errors.CodePkgCryptoTransitSignInputFormat)
 	}
 
 	if p.Type.HashSignatureInput() && !req.Prehashed {
@@ -52,7 +51,7 @@ func (t *Transit) Sign(ctx context.Context, req *structs.SignParameters) (*struc
 		verificationContext, err = base64.StdEncoding.DecodeString(req.Context)
 		if err != nil {
 			p.Unlock()
-			return nil, errors.New("failed to base64-decode context")
+			return nil, errors.New("transit sign failed to base64-decode context", errors.CodePkgCryptoTransitSignContextFormat)
 		}
 	}
 
@@ -60,7 +59,7 @@ func (t *Transit) Sign(ctx context.Context, req *structs.SignParameters) (*struc
 	p.Unlock()
 
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "transit sign error", errors.CodePkgCryptoTransitSign)
 	}
 	return &structs.SignResponse{
 		Result: sig.Signature,
@@ -75,25 +74,25 @@ func (t *Transit) VerifySign(ctx context.Context, req *structs.VerificationReque
 	}, rand.Reader)
 
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "transit verify sign get key error", errors.CodePkgCryptoTransitVerifySignGetKey)
 	}
 	if p == nil {
-		return nil, errors.New("encryption key not found")
+		return nil, errors.New("transit verify sign encryption key not found", errors.CodePkgCryptoTransitVerifySignKeyNotFound)
 	}
 
 	hashType, err := getVaultHashType(req.HashAlgorithm)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "transit verify sign get hash type error", errors.CodePkgCryptoTransitVerifySignKeyHashType)
 	}
 	if !p.Type.SigningSupported() {
 		p.Unlock()
-		return nil, fmt.Errorf("key type %v does not support verification", p.Type)
+		return nil, errors.Newf(errors.CodePkgCryptoTransitVerifySignUnsupported, "transit verify sign key type %v does not support verification", p.Type)
 	}
 
 	input, err := base64.StdEncoding.DecodeString(req.Input)
 	if err != nil {
 		p.Unlock()
-		return nil, fmt.Errorf("unable to decode input as base64: %s", err)
+		return nil, errors.Wrap(err, "transit verify sign unable to decode input as base64", errors.CodePkgCryptoTransitVerifySignInputFormat)
 	}
 
 	if p.Type.HashSignatureInput() && !req.Prehashed {
@@ -107,7 +106,7 @@ func (t *Transit) VerifySign(ctx context.Context, req *structs.VerificationReque
 		verificationContext, err = base64.StdEncoding.DecodeString(req.Context)
 		if err != nil {
 			p.Unlock()
-			return nil, errors.New("failed to base64-decode context")
+			return nil, errors.New("transit verify sign failed to base64-decode context", errors.CodePkgCryptoTransitVerifySignContextFormat)
 		}
 	}
 
@@ -115,7 +114,7 @@ func (t *Transit) VerifySign(ctx context.Context, req *structs.VerificationReque
 	p.Unlock()
 
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "transit sign error", errors.CodePkgCryptoTransitVerifySign)
 	}
 	return &structs.VerificationResponse{
 		VerificationResult: valid,
@@ -136,7 +135,7 @@ func getVaultHashType(algorithm structs.HashType) (keysutil.HashType, error) {
 	case structs.HashType_HashTypeSHA2512:
 		ht = keysutil.HashTypeSHA2512
 	default:
-		return ht, errors.New("invalid hash algorithm")
+		return ht, errors.New("invalid hash algorithm", errors.CodePkgCryptoTransitGetHashType)
 	}
 	return ht, nil
 }
