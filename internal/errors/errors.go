@@ -25,7 +25,7 @@ const (
 	CodeCmdServerExecute          Code = "031"
 	CodeCmdUnseal                 Code = "04"
 
-	CodeapiGrpc                       Code = "10"
+	CodeApiGrpc                       Code = "10"
 	CodeApiGrpcCreateKey              Code = "100"
 	CodeApiGrpcReadKey                Code = "101"
 	CodeApiGrpcDeleteKey              Code = "102"

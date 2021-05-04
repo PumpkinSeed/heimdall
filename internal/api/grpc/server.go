@@ -17,14 +17,14 @@ import (
 func Serve(addr string) error {
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
-		return errors.Wrap(err, "grpc serve error", errors.CodeapiGrpc)
+		return errors.Wrap(err, "grpc serve error", errors.CodeApiGrpc)
 	}
 	gsrv := grpc.NewServer()
 	structs.RegisterEncryptionServer(gsrv, newServer(unseal.Get()))
 	log.Infof("gRPC server listening on %s", addr)
 
 	if err := gsrv.Serve(lis); err != nil {
-		return errors.Wrap(err, "grpc serve error", errors.CodeapiGrpc)
+		return errors.Wrap(err, "grpc serve error", errors.CodeApiGrpc)
 	}
 
 	return nil
