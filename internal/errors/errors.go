@@ -128,6 +128,19 @@ const (
 
 	CodePkgCrypto Code = "3"
 
+	CodePkgCryptoKeyring                        Code = "30"
+	CodePkgCryptoKeyringAeadForTerm             Code = "301"
+	CodePkgCryptoKeyringAeadForTermMissingTerm  Code = "3010"
+	CodePkgCryptoKeyringAeadForTermFromKey      Code = "3011"
+	CodePkgCryptoKeyringInitGetError            Code = "302"
+	CodePkgCryptoKeyringInitNotFound            Code = "303"
+	CodePkgCryptoKeyringInitTermMisMatch        Code = "304"
+	CodePkgCryptoKeyringAeadFromKey             Code = "305"
+	CodePkgCryptoKeyringAeadFromKeyCipherCreate Code = "3050"
+	CodePkgCryptoKeyringAeadFromKeyGCMCreate    Code = "3051"
+	CodePkgCryptoKeyringBarrierDecrypt          Code = "306"
+	CodePkgCryptoKeyringDeserialize             Code = "307"
+
 	CodePkgHealthcheck Code = "4"
 
 	CodePkgInit Code = "5"
