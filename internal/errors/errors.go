@@ -76,6 +76,20 @@ const (
 	CodeApiSocketUnsealKeyring        Code = "1241"
 	CodeApiSocketUnsealMount          Code = "1242"
 	CodeApiSocketUnsealPostProcess    Code = "1243"
+
+	CodeClient Code = "2"
+
+	CodePkgCrypto Code = "3"
+
+	CodePkgHealthcheck Code = "4"
+
+	CodePkgInit Code = "5"
+
+	CodePkgSeal Code = "6"
+
+	CodePkgStorage Code = "7"
+
+	CodeInternal Code = "8" // TODO
 )
 
 type Code string
