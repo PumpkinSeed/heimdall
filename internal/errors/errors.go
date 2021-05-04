@@ -149,6 +149,13 @@ const (
 	CodePkgCryptoMountDecodeTable           Code = "314"
 	CodePkgCryptoMountDecodeTableJsonDecode Code = "3140"
 
+	CodePkgCryptoTransit               Code = "32"
+	CodePkgCryptoTransitCreateKey      Code = "320"
+	CodePkgCryptoTransitGetKey         Code = "321"
+	CodePkgCryptoTransitGetKeyNotFound Code = "3210"
+	CodePkgCryptoTransitListKeys       Code = "322"
+	CodePkgCryptoTransitDeleteKey      Code = "323"
+
 	CodePkgHealthcheck Code = "4"
 
 	CodePkgInit Code = "5"
