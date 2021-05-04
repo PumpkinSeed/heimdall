@@ -19,6 +19,10 @@ const (
 	CodeCmdFlags                  Code = "01"
 	CodeCmdInit                   Code = "02"
 	CodeCmdServer                 Code = "03"
+	CodeCmdServerEnvSetup         Code = "030"
+	CodeCmdServerEnvSetupPhysical Code = "0300"
+	CodeCmdServerEnvSetupLogical  Code = "0301"
+	CodeCmdServerExecute          Code = "031"
 	CodeCmdUnseal                 Code = "04"
 )
 
