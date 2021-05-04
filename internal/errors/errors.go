@@ -245,7 +245,9 @@ const (
 	SealBarrierConfigJsonMarshal      Code = "510"
 	SealBarrierConfigPut              Code = "511"
 
-	CodePkgStorage Code = "6"
+	CodePkgStorage         Code = "6"
+	CodePkgStorageInMemory Code = "61"
+	CodePkgStorageConsul   Code = "62"
 
 	CodeInternal Code = "7" // TODO
 )
