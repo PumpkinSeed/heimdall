@@ -8,6 +8,7 @@ import (
 	initcommand "github.com/PumpkinSeed/heimdall/cmd/init"
 	"github.com/PumpkinSeed/heimdall/cmd/server"
 	"github.com/PumpkinSeed/heimdall/cmd/unseal"
+	"github.com/PumpkinSeed/heimdall/internal/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -23,7 +24,8 @@ var app = cli.App{
 		flags.LogOutput,
 		flags.LogAdditional,
 	},
-	Before: common.Before,
+	Before:         common.Before,
+	ExitErrHandler: errors.CliHandler,
 }
 
 func main() {

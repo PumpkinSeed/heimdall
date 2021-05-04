@@ -74,5 +74,5 @@ func (h *HeimdallError) Error() string {
 }
 
 func CliHandler(ctx *cli.Context, err error) {
-	log.Error(Wrap(err, "fatal error", Code))
+	log.Error(Wrap(err, "fatal error", CodeCmd))
 }
