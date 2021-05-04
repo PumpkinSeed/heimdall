@@ -30,7 +30,7 @@ var app = cli.App{
 
 func main() {
 	if err := app.Run(os.Args); err != nil {
-		log.Fatal(err)
+		log.Error(err)
 		os.Exit(1)
 	}
 }

@@ -1,6 +1,7 @@
 package errors
 
 import (
+	"os"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -68,6 +69,7 @@ func (h *HeimdallError) Error() string {
 	sb.WriteString("[")
 	sb.WriteString(strings.Join(h.Codes, ","))
 	sb.WriteString("]")
+	sb.WriteString(" ")
 	sb.WriteString(h.Msg)
 
 	return sb.String()
@@ -75,4 +77,5 @@ func (h *HeimdallError) Error() string {
 
 func CliHandler(ctx *cli.Context, err error) {
 	log.Error(Wrap(err, "fatal error", CodeCmd))
+	os.Exit(1)
 }
