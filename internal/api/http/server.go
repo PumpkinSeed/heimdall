@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/PumpkinSeed/heimdall/internal/errors"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/transit"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/utils"
@@ -20,7 +21,11 @@ func Serve(addr string) error {
 	s := newServer(unseal.Get())
 	s.Init()
 	log.Infof("HTTP server listening on %s", addr)
-	return http.ListenAndServe(addr, s)
+	err := http.ListenAndServe(addr, s)
+	if err != nil {
+		return errors.Wrap(err, "http listen error", errors.CodeApiHTTP)
+	}
+	return nil
 }
 
 type server struct {
@@ -79,19 +84,19 @@ func (s server) CreateKey(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	var req structs.Key
 	if err := bind(r, &req); err != nil {
-		log.Error(err)
+		log.Error(errors.Wrap(err, "http create key bind error", errors.CodeApiHTTPCreateKey))
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	engineName := r.Context().Value(ctxKeyEngine).(string)
 	if engineName == "" {
-		log.Error("missing engine name")
+		log.Error(errors.New("http missing engine name", errors.CodeApiHTTPCreateKeyEngineName))
 		http.Error(w, "missing engine name", http.StatusBadRequest)
 		return
 	}
 	err := s.transit.CreateKey(ctx, req.Name, req.Type.String(), engineName)
 	if err != nil {
-		log.Error(err)
+		log.Error(errors.Wrap(err, "http transit call create key error", errors.CodeApiHTTPCreateKey))
 		http.Error(w, "internal server error"+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -105,17 +110,19 @@ func (s server) CreateKey(w http.ResponseWriter, r *http.Request) {
 func (s server) ReadKey(w http.ResponseWriter, r *http.Request) {
 	key := chi.URLParam(r, "key")
 	if key == "" {
+		log.Error(errors.New("key not found", errors.CodeApiHTTPReadKey))
 		http.Error(w, "key not found", http.StatusBadRequest)
 		return
 	}
 	engineName := r.Context().Value(ctxKeyEngine).(string)
 	if engineName == "" {
-		log.Error("missing engine name")
+		log.Error(errors.New("http missing engine name", errors.CodeApiHTTPReadKeyEngineName))
 		http.Error(w, "missing engine name", http.StatusBadRequest)
 		return
 	}
 	k, err := s.transit.GetKey(r.Context(), key, engineName)
 	if err != nil {
+		log.Error(errors.Wrap(err, "http transit call get key error", errors.CodeApiHTTPReadKey))
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -132,20 +139,22 @@ func (s server) ReadKey(w http.ResponseWriter, r *http.Request) {
 func (s server) DeleteKey(w http.ResponseWriter, r *http.Request) {
 	key := chi.URLParam(r, "key")
 	if key == "" {
+		log.Error(errors.New("key not found", errors.CodeApiHTTPDeleteKey))
 		http.Error(w, "key not found", http.StatusBadRequest)
 		return
 	}
 
 	engineName := r.Context().Value(ctxKeyEngine).(string)
 	if engineName == "" {
-		log.Error("missing engine name")
+		log.Error(errors.New("http missing engine name", errors.CodeApiHTTPDeleteKeyEngineName))
 		http.Error(w, "missing engine name", http.StatusBadRequest)
 		return
 	}
 
 	err := s.transit.DeleteKey(r.Context(), key, engineName)
 	if err != nil {
-		log.Errorf("Error with key deletion [%s]: %v", key, err)
+		log.Debugf("Error with key deletion [%s]: %v", key, err)
+		log.Error(errors.Wrap(err, "http transit call delete key error", errors.CodeApiHTTPDeleteKey))
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -162,14 +171,14 @@ func (s server) DeleteKey(w http.ResponseWriter, r *http.Request) {
 func (s server) ListKeys(w http.ResponseWriter, r *http.Request) {
 	engineName := r.Context().Value(ctxKeyEngine).(string)
 	if engineName == "" {
-		log.Error("missing engine name")
+		log.Error(errors.New("http missing engine name", errors.CodeApiHTTPListKeysEngineName))
 		http.Error(w, "missing engine name", http.StatusBadRequest)
 		return
 	}
 
 	keys, err := s.transit.ListKeys(r.Context(), engineName)
 	if err != nil {
-		log.Error(err)
+		log.Error(errors.Wrap(err, "http transit call list keys error", errors.CodeApiHTTPListKeys))
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -191,14 +200,14 @@ func (s server) ListKeys(w http.ResponseWriter, r *http.Request) {
 func (s server) Encrypt(w http.ResponseWriter, r *http.Request) {
 	engineName := r.Context().Value(ctxKeyEngine).(string)
 	if engineName == "" {
-		log.Error("missing engine name")
+		log.Error(errors.New("http missing engine name", errors.CodeApiHTTPEncryptEngineName))
 		http.Error(w, "missing engine name", http.StatusBadRequest)
 		return
 	}
 
 	var req structs.EncryptRequest
 	if err := bind(r, &req); err != nil {
-		log.Error(err)
+		log.Error(errors.Wrap(err, "http encrypt bind error", errors.CodeApiHTTPEncrypt))
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -209,7 +218,8 @@ func (s server) Encrypt(w http.ResponseWriter, r *http.Request) {
 		KeyVersion: int(req.KeyVersion),
 	})
 	if err != nil {
-		log.Errorf("Error encription [%s]: %v", req.KeyName, err)
+		log.Debugf("Error encription [%s]: %v", req.KeyName, err)
+		log.Error(errors.Wrap(err, "http transit call encrypt error", errors.CodeApiHTTPEncrypt))
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -221,14 +231,14 @@ func (s server) Encrypt(w http.ResponseWriter, r *http.Request) {
 func (s server) Decrypt(w http.ResponseWriter, r *http.Request) {
 	engineName := r.Context().Value(ctxKeyEngine).(string)
 	if engineName == "" {
-		log.Error("missing engine name")
+		log.Error(errors.New("http missing engine name", errors.CodeApiHTTPDecryptEngineName))
 		http.Error(w, "missing engine name", http.StatusBadRequest)
 		return
 	}
 
 	var req structs.DecryptRequest
 	if err := bind(r, &req); err != nil {
-		log.Error(err)
+		log.Error(errors.Wrap(err, "http decrypt bind error", errors.CodeApiHTTPDecrypt))
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -239,7 +249,8 @@ func (s server) Decrypt(w http.ResponseWriter, r *http.Request) {
 		KeyVersion: int(req.KeyVersion),
 	})
 	if err != nil {
-		log.Errorf("Error decription [%s]: %v", req.KeyName, err)
+		log.Debugf("Error decription [%s]: %v", req.KeyName, err)
+		log.Error(errors.Wrap(err, "http transit call encrypt error", errors.CodeApiHTTPDecrypt))
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -251,13 +262,14 @@ func (s server) Decrypt(w http.ResponseWriter, r *http.Request) {
 func (s server) Hash(w http.ResponseWriter, r *http.Request) {
 	var req structs.HashRequest
 	if err := bind(r, &req); err != nil {
-		log.Error(err)
+		log.Error(errors.Wrap(err, "http hash bind error", errors.CodeApiHTTPHash))
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	hash, err := s.transit.Hash(r.Context(), req.Input, req.Algorithm, req.Format)
 	if err != nil {
-		log.Errorf("Error hashing: %v", err)
+		log.Debugf("Error hashing: %v", err)
+		log.Error(errors.Wrap(err, "http transit call hash error", errors.CodeApiHTTPHash))
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -269,21 +281,22 @@ func (s server) Hash(w http.ResponseWriter, r *http.Request) {
 func (s server) GenerateHMAC(w http.ResponseWriter, r *http.Request) {
 	engineName := r.Context().Value(ctxKeyEngine).(string)
 	if engineName == "" {
-		log.Error("missing engine name")
+		log.Error(errors.New("http missing engine name", errors.CodeApiHTTPHmacEngineName))
 		http.Error(w, "missing engine name", http.StatusBadRequest)
 		return
 	}
 
 	var req structs.HMACRequest
 	if err := bind(r, &req); err != nil {
-		log.Error(err)
+		log.Error(errors.Wrap(err, "http hmac bind error", errors.CodeApiHTTPHash))
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	hmac, err := s.transit.HMAC(r.Context(), req.KeyName, req.Input, req.Algorithm, int(req.KeyVersion), engineName)
 	if err != nil {
-		log.Errorf("Error HMAC generating: %v", err)
+		log.Debugf("Error HMAC generating: %v", err)
+		log.Error(errors.Wrap(err, "http transit call hmac error", errors.CodeApiHTTPHmac))
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -295,14 +308,14 @@ func (s server) GenerateHMAC(w http.ResponseWriter, r *http.Request) {
 func (s server) Sign(w http.ResponseWriter, r *http.Request) {
 	engineName := r.Context().Value(ctxKeyEngine).(string)
 	if engineName == "" {
-		log.Error("missing engine name")
+		log.Error(errors.New("http missing engine name", errors.CodeApiHTTPSignEngineName))
 		http.Error(w, "missing engine name", http.StatusBadRequest)
 		return
 	}
 
 	var req structs.SignParameters
 	if err := bind(r, &req); err != nil {
-		log.Error(err)
+		log.Error(errors.Wrap(err, "http sign bind error", errors.CodeApiHTTPSign))
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -311,7 +324,8 @@ func (s server) Sign(w http.ResponseWriter, r *http.Request) {
 
 	signature, err := s.transit.Sign(r.Context(), &req)
 	if err != nil {
-		log.Errorf("Error generating sign: %v", err)
+		log.Debugf("Error generating sign: %v", err)
+		log.Error(errors.Wrap(err, "http transit call sign error", errors.CodeApiHTTPSign))
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -322,14 +336,14 @@ func (s server) Sign(w http.ResponseWriter, r *http.Request) {
 func (s server) VerifySigned(w http.ResponseWriter, r *http.Request) {
 	engineName := r.Context().Value(ctxKeyEngine).(string)
 	if engineName == "" {
-		log.Error("missing engine name")
+		log.Error(errors.New("http missing engine name", errors.CodeApiHTTPVerifySignEngineName))
 		http.Error(w, "missing engine name", http.StatusBadRequest)
 		return
 	}
 
 	var req structs.VerificationRequest
 	if err := bind(r, &req); err != nil {
-		log.Error(err)
+		log.Error(errors.Wrap(err, "http verify sign bind error", errors.CodeApiHTTPVerifySign))
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -338,7 +352,8 @@ func (s server) VerifySigned(w http.ResponseWriter, r *http.Request) {
 
 	verificationResult, err := s.transit.VerifySign(r.Context(), &req)
 	if err != nil {
-		log.Errorf("Error validating signature %v", err)
+		log.Debugf("Error validating signature %v", err)
+		log.Error(errors.Wrap(err, "http transit call verify sign error", errors.CodeApiHTTPVerifySign))
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
