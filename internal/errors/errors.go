@@ -1,6 +1,7 @@
 package errors
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -195,6 +196,27 @@ const (
 	CodePkgCryptoTransitVerifySignContextFormat    Code = "3295"
 	CodePkgCryptoTransitGetHashType                Code = "32_10_"
 
+	CodePkgCryptoUnseal                        Code = "33"
+	CodePkgCryptoUnsealSealed                  Code = "330"
+	CodePkgCryptoUnsealUnseal                  Code = "331"
+	CodePkgCryptoUnsealUnsealGetKey            Code = "3310"
+	CodePkgCryptoUnsealUnsealShamirCombine     Code = "3311"
+	CodePkgCryptoUnsealUnsealAESGCM            Code = "3312"
+	CodePkgCryptoUnsealUnsealProtoUnmarshal    Code = "3313"
+	CodePkgCryptoUnsealUnsealUnmarshal         Code = "3314"
+	CodePkgCryptoUnsealKeyFormat               Code = "332"
+	CodePkgCryptoUnsealMissingMasterKey        Code = "333"
+	CodePkgCryptoUnsealKeyring                 Code = "334"
+	CodePkgCryptoUnsealKeyringMissing          Code = "335"
+	CodePkgCryptoUnsealMount                   Code = "336"
+	CodePkgCryptoUnsealStatus                  Code = "337"
+	CodePkgCryptoUnsealDevMode                 Code = "338"
+	CodePkgCryptoUnsealDevModeRead             Code = "3380"
+	CodePkgCryptoUnsealDevModePostProcess      Code = "3381"
+	CodePkgCryptoUnsealPostProcess             Code = "339"
+	CodePkgCryptoUnsealPostProcessSBInitialize Code = "3390"
+	CodePkgCryptoUnsealPostProcessSBUnseal     Code = "3391"
+
 	CodePkgHealthcheck Code = "4"
 
 	CodePkgInit Code = "5"
@@ -269,4 +291,8 @@ func (h *Error) Error() string {
 func CliHandler(ctx *cli.Context, err error) {
 	log.Error(Wrap(err, "fatal error", CodeCmd))
 	os.Exit(1)
+}
+
+func Is(err, target error) bool {
+	return errors.Is(err, target)
 }
