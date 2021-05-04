@@ -220,15 +220,22 @@ const (
 	CodePkgCryptoUtils               Code = "34"
 	CodePkgCryptoUtilsBarrierDecrypt Code = "340"
 
-	CodePkgHealthcheck Code = "4"
+	CodePkgInit Code = "4"
 
-	CodePkgInit Code = "5"
+	CodePkgSeal                       Code = "5"
+	CodePkgSealStoredKeys             Code = "50"
+	CodePkgSealStoredKeysInputFormat  Code = "500"
+	CodePkgSealStoredKeysJsonMarshal  Code = "501"
+	CodePkgSealStoredKeysEncrypt      Code = "502"
+	CodePkgSealStoredKeysProtoMarshal Code = "503"
+	CodePkgSealStoredKeysPut          Code = "504"
+	SealBarrierConfig                 Code = "51"
+	SealBarrierConfigJsonMarshal      Code = "510"
+	SealBarrierConfigPut              Code = "511"
 
-	CodePkgSeal Code = "6"
+	CodePkgStorage Code = "6"
 
-	CodePkgStorage Code = "7"
-
-	CodeInternal Code = "8" // TODO
+	CodeInternal Code = "7" // TODO
 )
 
 type Code string

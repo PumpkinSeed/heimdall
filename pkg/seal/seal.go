@@ -3,8 +3,9 @@ package seal
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"fmt"
+	"sync/atomic"
+
+	"github.com/PumpkinSeed/heimdall/internal/errors"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/go-hclog"
@@ -14,7 +15,6 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
-	"sync/atomic"
 )
 
 func New(physical physical.Backend, access *vaultseal.Access) vault.Seal {
@@ -54,26 +54,26 @@ func (s *seal) SealWrapable() bool {
 
 func (s *seal) SetStoredKeys(ctx context.Context, keys [][]byte) error {
 	if keys == nil {
-		return errors.New("keys were nil")
+		return errors.New("seal set stored keys, input keys were nil", errors.CodePkgSealStoredKeysInputFormat)
 	}
 	if len(keys) == 0 {
-		return errors.New("no keys provided")
+		return errors.New("seal set stored keys, no keys provided", errors.CodePkgSealStoredKeysInputFormat)
 	}
 
 	buf, err := json.Marshal(keys)
 	if err != nil {
-		return fmt.Errorf("failed to encode keys for storage: %v", err)
+		return errors.Wrap(err, "seal set stored keys, failed to encode keys for storage", errors.CodePkgSealStoredKeysJsonMarshal)
 	}
 
 	// Encrypt and marshal the keys
 	blobInfo, err := s.access.Encrypt(ctx, buf, nil)
 	if err != nil {
-		return fmt.Errorf("failed to encrypt keys for storage: %v", err)
+		return errors.Wrap(err, "seal set stored keys, failed to encrypt keys for storage", errors.CodePkgSealStoredKeysEncrypt)
 	}
 
 	value, err := proto.Marshal(blobInfo)
 	if err != nil {
-		return fmt.Errorf("failed to marshal value for storage: %v", err)
+		return errors.Wrap(err, "seal set stored keys, failed to marshal value for storage", errors.CodePkgSealStoredKeysProtoMarshal)
 	}
 
 	// Store the seal configuration.
@@ -83,7 +83,7 @@ func (s *seal) SetStoredKeys(ctx context.Context, keys [][]byte) error {
 	}
 
 	if err := s.physical.Put(ctx, pe); err != nil {
-		return fmt.Errorf("failed to write keys to storage: %v", err)
+		return errors.Wrap(err, "seal set stored keys, failed to write keys to storage", errors.CodePkgSealStoredKeysPut)
 	}
 
 	return nil
@@ -114,7 +114,7 @@ func (s *seal) SetBarrierConfig(ctx context.Context, config *vault.SealConfig) e
 	// Encode the seal configuration
 	buf, err := json.Marshal(config)
 	if err != nil {
-		return fmt.Errorf("failed to encode seal configuration: %v", err)
+		return errors.Wrap(err, "failed to encode seal configuration: %v", errors.SealBarrierConfigJsonMarshal)
 	}
 
 	// Store the seal configuration
@@ -124,7 +124,7 @@ func (s *seal) SetBarrierConfig(ctx context.Context, config *vault.SealConfig) e
 	}
 
 	if err := s.physical.Put(ctx, pe); err != nil {
-		return fmt.Errorf("failed to write seal configuration: %v", err)
+		return errors.Wrap(err, "failed to write seal configuration: %v", errors.SealBarrierConfigPut)
 	}
 
 	s.SetCachedBarrierConfig(config.Clone())
