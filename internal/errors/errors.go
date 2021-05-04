@@ -72,6 +72,10 @@ const (
 	CodeApiSocketInit                 Code = "123"
 	CodeApiSocketInitUnmarshal        Code = "1230"
 	CodeApiSocketInitMarshal          Code = "1231"
+	CodeApiSocketUnseal               Code = "124"
+	CodeApiSocketUnsealKeyring        Code = "1241"
+	CodeApiSocketUnsealMount          Code = "1242"
+	CodeApiSocketUnsealPostProcess    Code = "1243"
 )
 
 type Code string

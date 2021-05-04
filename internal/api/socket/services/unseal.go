@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 
+	"github.com/PumpkinSeed/heimdall/internal/errors"
 	"github.com/PumpkinSeed/heimdall/internal/structs"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/utils"
@@ -27,7 +28,7 @@ func (u Unseal) Handler(ctx context.Context, req structs.SocketRequest) (structs
 	if err != nil {
 		return structs.SocketResponse{
 			Data: []byte(u.state.Status().String()),
-		}, err
+		}, errors.Wrap(err, "unseal error", errors.CodeApiSocketUnseal)
 	}
 	if !done {
 		log.Debug("Unseal not done yet")
@@ -41,7 +42,7 @@ func (u Unseal) Handler(ctx context.Context, req structs.SocketRequest) (structs
 
 		return structs.SocketResponse{
 			Data: []byte(u.state.Status().String()),
-		}, err
+		}, errors.Wrap(err, "unseal keyring error", errors.CodeApiSocketUnsealKeyring)
 	}
 	barrierPath, err := u.state.Mount(ctx)
 	if err != nil {
@@ -49,14 +50,14 @@ func (u Unseal) Handler(ctx context.Context, req structs.SocketRequest) (structs
 
 		return structs.SocketResponse{
 			Data: []byte(u.state.Status().String()),
-		}, err
+		}, errors.Wrap(err, "unseal mount error", errors.CodeApiSocketUnsealMount)
 	}
 	if err := u.state.PostProcess(ctx, barrierPath); err != nil {
 		log.Debug("Post process error")
 
 		return structs.SocketResponse{
 			Data: []byte(u.state.Status().String()),
-		}, err
+		}, errors.Wrap(err, "unseal post process error", errors.CodeApiSocketUnsealPostProcess)
 	}
 	utils.Memzero(req.Data)
 
