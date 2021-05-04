@@ -1,6 +1,7 @@
 package errors
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -149,12 +150,19 @@ const (
 	CodePkgCryptoMountDecodeTable           Code = "314"
 	CodePkgCryptoMountDecodeTableJsonDecode Code = "3140"
 
-	CodePkgCryptoTransit               Code = "32"
-	CodePkgCryptoTransitCreateKey      Code = "320"
-	CodePkgCryptoTransitGetKey         Code = "321"
-	CodePkgCryptoTransitGetKeyNotFound Code = "3210"
-	CodePkgCryptoTransitListKeys       Code = "322"
-	CodePkgCryptoTransitDeleteKey      Code = "323"
+	CodePkgCryptoTransit                       Code = "32"
+	CodePkgCryptoTransitCreateKey              Code = "320"
+	CodePkgCryptoTransitGetKey                 Code = "321"
+	CodePkgCryptoTransitGetKeyNotFound         Code = "3210"
+	CodePkgCryptoTransitListKeys               Code = "322"
+	CodePkgCryptoTransitDeleteKey              Code = "323"
+	CodePkgCryptoTransitEncrypt                Code = "324"
+	CodePkgCryptoTransitEncryptGetKey          Code = "3240"
+	CodePkgCryptoTransitEncryptPolicyNotFound  Code = "3241"
+	CodePkgCryptoTransitEncryptPlainTextFormat Code = "3242"
+	CodePkgCryptoTransitEncryptContextFormat   Code = "3243"
+	CodePkgCryptoTransitEncryptNonceFormat     Code = "3244"
+	CodePkgCryptoTransitEncryptResultFormat    Code = "32451"
 
 	CodePkgHealthcheck Code = "4"
 
@@ -185,6 +193,13 @@ func newErr(err error) error {
 func New(errMsg string, code Code) error {
 	return &Error{
 		Msg:   errMsg,
+		Codes: []string{string(code)},
+	}
+}
+
+func Newf(code Code, errMsg string, args ...interface{}) error {
+	return &Error{
+		Msg:   fmt.Sprintf(errMsg, args...),
 		Codes: []string{string(code)},
 	}
 }
