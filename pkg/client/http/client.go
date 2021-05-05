@@ -3,15 +3,16 @@ package http
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"sync/atomic"
 
+	"github.com/PumpkinSeed/heimdall/internal/errors"
 	"github.com/PumpkinSeed/heimdall/pkg/client"
 	"github.com/PumpkinSeed/heimdall/pkg/structs"
 	"github.com/hashicorp/vault/api"
+	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
 
@@ -29,11 +30,13 @@ func (o *Options) Setup() client.Client {
 		o.Config = api.DefaultConfig()
 	}
 	c := proxyClient{o: *o}
-	vaultClient, _ := api.NewClient(o.Config)
-	if o.Token != "" {
-		vaultClient.AddHeader("token", o.Token)
+	vaultClient, err := api.NewClient(o.Config)
+	if err != nil {
+		log.Error(errors.Wrap(err, "vault client create error", errors.CodeClientHttpSetupCreateClient))
 	}
-
+	if o.Token != "" {
+		vaultClient.AddHeader("authorization", o.Token)
+	}
 	if len(o.URLs) == 0 {
 		c.cs = []*httpClient{{vaultClient}}
 	} else {
@@ -42,10 +45,11 @@ func (o *Options) Setup() client.Client {
 			o.Config.Address = url
 			duplicate, err := vaultClient.Clone()
 			if err != nil {
-				panic(err)
+				log.Error(errors.Wrap(err, "vault client clone error", errors.CodeClientHttpSetupCloneClient))
+				continue
 			}
 			if o.Token != "" {
-				duplicate.AddHeader("token", o.Token)
+				duplicate.AddHeader("authorization", o.Token)
 			}
 			cs = append(cs, &httpClient{duplicate})
 		}
@@ -61,15 +65,6 @@ type proxyClient struct {
 	nxt uint32
 }
 
-func (c *proxyClient) Health(ctx context.Context, in *structs.HealthRequest) (*structs.HealthResponse, error) {
-	for _, cl := range c.cs {
-		if cl.Address() == in.Address {
-			return cl.Health(ctx, in)
-		}
-	}
-	return nil, errors.New("invalid address")
-}
-
 func (c *proxyClient) next() structs.EncryptionClient {
 	n := atomic.AddUint32(&c.nxt, 1)
 	return c.cs[(int(n)-1)%len(c.cs)]
@@ -77,49 +72,89 @@ func (c *proxyClient) next() structs.EncryptionClient {
 
 func (c *proxyClient) CreateKey(ctx context.Context, key *structs.Key) (*structs.KeyResponse, error) {
 	key.EngineName = c.o.EngineName
-	return c.next().CreateKey(ctx, key)
+	createKey, err := c.next().CreateKey(ctx, key)
+	if err != nil {
+		return nil, errors.Wrap(err, "http client create key error", errors.CodeClientHttpCreateKey)
+	}
+	return createKey, nil
 }
 
 func (c *proxyClient) ReadKey(ctx context.Context, keyName string) (*structs.KeyResponse, error) {
-	return c.next().ReadKey(ctx, &structs.KeyName{Name: keyName, EngineName: c.o.EngineName})
+	key, err := c.next().ReadKey(ctx, &structs.KeyName{Name: keyName, EngineName: c.o.EngineName})
+	if err != nil {
+		return nil, errors.Wrap(err, "http client read key error", errors.CodeClientHttpReadKey)
+	}
+	return key, nil
 }
 
 func (c *proxyClient) DeleteKey(ctx context.Context, keyName string) (*structs.KeyResponse, error) {
-	return c.next().DeleteKey(ctx, &structs.KeyName{Name: keyName, EngineName: c.o.EngineName})
+	key, err := c.next().DeleteKey(ctx, &structs.KeyName{Name: keyName, EngineName: c.o.EngineName})
+	if err != nil {
+		return nil, errors.Wrap(err, "http client delete key error", errors.CodeClientHttpDeleteKey)
+	}
+	return key, nil
 }
 
 func (c *proxyClient) ListKeys(ctx context.Context) (*structs.KeyListResponse, error) {
-	return c.next().ListKeys(ctx, &structs.Empty{EngineName: c.o.EngineName})
+	keys, err := c.next().ListKeys(ctx, &structs.Empty{EngineName: c.o.EngineName})
+	if err != nil {
+		return nil, errors.Wrap(err, "http client list keys error", errors.CodeClientHttpListKey)
+	}
+	return keys, nil
 }
 
 func (c *proxyClient) Encrypt(ctx context.Context, req *structs.EncryptRequest) (*structs.CryptoResult, error) {
 	req.EngineName = c.o.EngineName
-	return c.next().Encrypt(ctx, req)
+	encrypt, err := c.next().Encrypt(ctx, req)
+	if err != nil {
+		return nil, errors.Wrap(err, "http client encrypt error", errors.CodeClientHttpEncrypt)
+	}
+	return encrypt, nil
 }
 
 func (c *proxyClient) Decrypt(ctx context.Context, req *structs.DecryptRequest) (*structs.CryptoResult, error) {
 	req.EngineName = c.o.EngineName
-	return c.next().Decrypt(ctx, req)
+	decrypt, err := c.next().Decrypt(ctx, req)
+	if err != nil {
+		return nil, errors.Wrap(err, "http client decrypt error", errors.CodeClientHttpDecrypt)
+	}
+	return decrypt, nil
 }
 
 func (c *proxyClient) Hash(ctx context.Context, req *structs.HashRequest) (*structs.HashResponse, error) {
 	req.EngineName = c.o.EngineName
-	return c.next().Hash(ctx, req)
+	hash, err := c.next().Hash(ctx, req)
+	if err != nil {
+		return nil, errors.Wrap(err, "http client hash error", errors.CodeClientHttpHash)
+	}
+	return hash, nil
 }
 
 func (c *proxyClient) GenerateHMAC(ctx context.Context, req *structs.HMACRequest) (*structs.HMACResponse, error) {
 	req.EngineName = c.o.EngineName
-	return c.next().GenerateHMAC(ctx, req)
+	hmac, err := c.next().GenerateHMAC(ctx, req)
+	if err != nil {
+		return nil, errors.Wrap(err, "http client hmac error", errors.CodeClientHttpHmac)
+	}
+	return hmac, nil
 }
 
 func (c *proxyClient) Sign(ctx context.Context, req *structs.SignParameters) (*structs.SignResponse, error) {
 	req.EngineName = c.o.EngineName
-	return c.next().Sign(ctx, req)
+	sign, err := c.next().Sign(ctx, req)
+	if err != nil {
+		return nil, errors.Wrap(err, "http client sign error", errors.CodeClientHttpSign)
+	}
+	return sign, nil
 }
 
 func (c *proxyClient) VerifySigned(ctx context.Context, req *structs.VerificationRequest) (*structs.VerificationResponse, error) {
 	req.EngineName = c.o.EngineName
-	return c.next().VerifySigned(ctx, req)
+	signed, err := c.next().VerifySigned(ctx, req)
+	if err != nil {
+		return nil, errors.Wrap(err, "http client verify sign error", errors.CodeClientHttpVerifySign)
+	}
+	return signed, nil
 }
 
 // wrapper for vault client, implements the EncryptionClient interface
@@ -131,18 +166,18 @@ func (h httpClient) Health(ctx context.Context, in *structs.HealthRequest, opts 
 	r := h.NewRequest(http.MethodGet, fmt.Sprintf("/health"))
 	resp, err := h.RawRequestWithContext(ctx, r)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "http client vault raw request with context", errors.CodeClientHttpHealthVaultRequest)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusOK {
 		res, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "http client read error", errors.CodeClientHttpHealthRead)
 		}
 		var resp structs.HealthResponse
 		if err := json.Unmarshal(res, &resp); err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "http client read error", errors.CodeClientHttpHealthUnmarshal)
 		}
 		return &resp, nil
 	}
@@ -428,4 +463,13 @@ func (h httpClient) VerifySigned(ctx context.Context, in *structs.VerificationRe
 		return &keyResp, nil
 	}
 	return nil, err
+}
+
+func (c *proxyClient) Health(ctx context.Context, in *structs.HealthRequest) (*structs.HealthResponse, error) {
+	for _, cl := range c.cs {
+		if cl.Address() == in.Address {
+			return cl.Health(ctx, in)
+		}
+	}
+	return nil, errors.New("invalid address", errors.CodeClientHttp)
 }

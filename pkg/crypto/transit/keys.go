@@ -3,8 +3,8 @@ package transit
 import (
 	"context"
 	"crypto/rand"
-	"errors"
 
+	"github.com/PumpkinSeed/heimdall/internal/errors"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	"github.com/PumpkinSeed/heimdall/pkg/structs"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
@@ -28,10 +28,10 @@ func (t Transit) CreateKey(ctx context.Context, name, keyType, engineName string
 
 	policy, upserted, err := t.lm.GetPolicy(ctx, polReq, rand.Reader)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "transit create key get policy error", errors.CodePkgCryptoTransitCreateKey)
 	}
 	if policy == nil {
-		return errors.New("error generating key: returned policy was nil")
+		return errors.New("transit error generating key: returned policy was nil", errors.CodePkgCryptoTransitCreateKey)
 	}
 	defer policy.Unlock()
 	if !upserted {
@@ -50,10 +50,10 @@ func (t Transit) GetKey(ctx context.Context, name, engineName string) (*keysutil
 		Name:    name,
 	}, rand.Reader)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "transit get key get policy error", errors.CodePkgCryptoTransitGetKey)
 	}
 	if p == nil {
-		return nil, err
+		return nil, errors.New("transit get key policy not found", errors.CodePkgCryptoTransitGetKeyNotFound)
 	}
 
 	defer p.Unlock()
@@ -65,14 +65,22 @@ func (t Transit) ListKeys(ctx context.Context, engineName string) ([]string, err
 	if !t.u.Status().Unsealed {
 		return nil, unseal.ErrSealed
 	}
-	return t.u.Storage(engineName).List(ctx, "policy/")
+	list, err := t.u.Storage(engineName).List(ctx, "policy/")
+	if err != nil {
+		return nil, errors.Wrap(err, "transit list keys error", errors.CodePkgCryptoTransitListKeys)
+	}
+	return list, nil
 }
 
 func (t Transit) DeleteKey(ctx context.Context, name, engineName string) error {
 	if !t.u.Status().Unsealed {
 		return unseal.ErrSealed
 	}
-	return t.lm.DeletePolicy(ctx, t.u.Storage(engineName), name)
+	err := t.lm.DeletePolicy(ctx, t.u.Storage(engineName), name)
+	if err != nil {
+		return errors.Wrap(err, "transit delete key error", errors.CodePkgCryptoTransitDeleteKey)
+	}
+	return err
 }
 
 func getKeyType(typ string) keysutil.KeyType {

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/PumpkinSeed/heimdall/cmd/flags"
+	"github.com/PumpkinSeed/heimdall/internal/errors"
 	"github.com/PumpkinSeed/heimdall/internal/socket"
 	"github.com/PumpkinSeed/heimdall/internal/structs"
 	initcommand "github.com/PumpkinSeed/heimdall/pkg/init"
@@ -32,11 +33,14 @@ func initAction(ctx *cli.Context) error {
 
 	data, err := json.Marshal(initParams)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "init bind error", errors.CodeCmdInit)
 	}
 
-	return socket.Action(ctx, structs.SocketRequest{
+	if err := socket.Action(ctx, structs.SocketRequest{
 		Type: structs.SocketInit,
 		Data: data,
-	})
+	}); err != nil {
+		return errors.Wrap(err, "init action error", errors.CodeCmdInit)
+	}
+	return nil
 }

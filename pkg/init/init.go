@@ -4,8 +4,8 @@ import (
 	"context"
 	"crypto/aes"
 	"crypto/rand"
-	"fmt"
 
+	"github.com/PumpkinSeed/heimdall/internal/errors"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	"github.com/PumpkinSeed/heimdall/pkg/seal"
 	"github.com/PumpkinSeed/heimdall/pkg/token"
@@ -45,30 +45,30 @@ func NewInit(unseal *unseal.Unseal) *Init {
 func (init *Init) Initialize(ctx context.Context, req Request) (Result, error) {
 	seal := seal.New(init.unseal.Backend, seal.NewSealAccess())
 	if err := seal.Init(context.Background()); err != nil {
-		return Result{}, err
+		return Result{}, errors.Wrap(err, "init seal init error", errors.CodePkgInitInitializeSealInit)
 	}
 	barrierKey, _, err := generateShares(req)
 	if err != nil {
-		return Result{}, err
+		return Result{}, errors.Wrap(err, "init generate shares for barrier key error", errors.CodePkgInitInitializeGenerateSharesBarrier)
 	}
 	sealKey, sealKeyShares, err := generateShares(req)
 	if err != nil {
-		return Result{}, err
+		return Result{}, errors.Wrap(err, "init generate shares error", errors.CodePkgInitInitializeGenerateSharesSeal)
 	}
 	securityBarrier := unseal.Get().SecurityBarrier
 	err = securityBarrier.Initialize(context.Background(), barrierKey, sealKey, rand.Reader)
 	if err != nil {
-		return Result{}, err
+		return Result{}, errors.Wrap(err, "init security barrier init error", errors.CodePkgInitInitializeSBInit)
 	}
 
 	if err := securityBarrier.Unseal(context.Background(), barrierKey); err != nil {
-		return Result{}, err
+		return Result{}, errors.Wrap(err, "init security barrier unseal error", errors.CodePkgInitInitializeSBUnseal)
 	}
 
 	defer func(securityBarrier vault.SecurityBarrier) {
 		err := securityBarrier.Seal()
 		if err != nil {
-			log.Println(err)
+			log.Println(errors.Wrap(err, "init security barrier seal error", errors.CodePkgInitInitializeSBSeal))
 		}
 	}(securityBarrier)
 
@@ -77,23 +77,23 @@ func (init *Init) Initialize(ctx context.Context, req Request) (Result, error) {
 		SecretShares:    req.SecretShares,
 		SecretThreshold: req.SecretThreshold,
 	}); err != nil {
-		return Result{}, err
+		return Result{}, errors.Wrap(err, "init seal set barrier config error", errors.CodePkgInitInitializeSealBarrierConfig)
 	}
 
 	if err := seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAESGCMKeyBytes(sealKey); err != nil {
-		return Result{}, err
+		return Result{}, errors.Wrap(err, "init seal set AES GCM error", errors.CodePkgInitInitializeSealAESGCM)
 	}
 	if err := seal.SetStoredKeys(ctx, [][]byte{barrierKey}); err != nil {
-		return Result{}, fmt.Errorf("failed to store keys: %w", err)
+		return Result{}, errors.Wrap(err, "init failed to store keys", errors.CodePkgInitInitializeSealStoredKeys)
 	}
 
 	rootToken, err := init.ts.GenRootToken(ctx, "")
 	if err != nil {
-		return Result{}, err
+		return Result{}, errors.Wrap(err, "init get root token error", errors.CodePkgInitGetRootToken)
 	}
 
 	if err := persistMounts(ctx); err != nil {
-		return Result{}, err
+		return Result{}, errors.Wrap(err, "init persist mounts error", errors.CodePkgInitPersistMounts)
 	}
 
 	return Result{

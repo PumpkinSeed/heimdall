@@ -7,6 +7,7 @@ import (
 	"github.com/PumpkinSeed/heimdall/internal/api/grpc"
 	"github.com/PumpkinSeed/heimdall/internal/api/http"
 	"github.com/PumpkinSeed/heimdall/internal/api/socket"
+	"github.com/PumpkinSeed/heimdall/internal/errors"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	"github.com/PumpkinSeed/heimdall/pkg/storage"
 	"github.com/PumpkinSeed/heimdall/pkg/token"
@@ -40,7 +41,7 @@ func serve(ctx *cli.Context) error {
 	finished := make(chan struct{}, 1)
 
 	if err := setupEnvironment(ctx); err != nil {
-		return err
+		return errors.Wrap(err, "server setup error", errors.CodeCmdServer)
 	}
 
 	if !ctx.Bool(flags.NameDisableGrpc) {
@@ -59,11 +60,11 @@ func serve(ctx *cli.Context) error {
 func setupEnvironment(ctx *cli.Context) error {
 	b, err := createBackendConnection(ctx)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "environment setup error", errors.CodeCmdServerEnvSetup)
 	}
 	sb, err := createLogicalStorage(b)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "environment setup error", errors.CodeCmdServerEnvSetup)
 	}
 	u := unseal.Get()
 	u.SetBackend(b)
@@ -78,12 +79,12 @@ func checkAndSetDevMode(ctx *cli.Context, u *unseal.Unseal) error {
 		return nil
 	}
 	if err := u.DevMode(context.Background()); err != nil {
-		return err
+		return errors.Wrap(err, "environment setup dev mode error", errors.CodeCmdServerDevModeSetup)
 	}
 
 	tokenResp, err := token.NewTokenStore(u).GenRootToken(context.Background(), ctx.String(flags.NameTokenID))
 	if err != nil {
-		return err
+		return errors.Wrap(err, "server dev mode token create error", errors.CodeCmdServerDevModeTokenCreate)
 	}
 	log.Infof("generated token: %s", tokenResp.ID)
 
@@ -93,7 +94,7 @@ func checkAndSetDevMode(ctx *cli.Context, u *unseal.Unseal) error {
 func createLogicalStorage(b physical.Backend) (vault.SecurityBarrier, error) {
 	l, err := vault.NewAESGCMBarrier(b)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "logical backend setup error", errors.CodeCmdServerEnvSetupLogical)
 	}
 
 	return l, nil
@@ -102,7 +103,7 @@ func createLogicalStorage(b physical.Backend) (vault.SecurityBarrier, error) {
 func createBackendConnection(ctx *cli.Context) (physical.Backend, error) {
 	b, err := storage.Create(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "physical backend setup error", errors.CodeCmdServerEnvSetupPhysical)
 	}
 
 	return b, nil
@@ -111,7 +112,7 @@ func createBackendConnection(ctx *cli.Context) (physical.Backend, error) {
 func serverExecutor(fn func(string) error, str string, finisher chan struct{}) {
 	go func() {
 		if err := fn(str); err != nil {
-			log.Error(err)
+			log.Error(errors.Wrap(err, "server execution error", errors.CodeCmdServerExecute))
 		}
 		finisher <- struct{}{}
 	}()

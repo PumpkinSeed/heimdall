@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/PumpkinSeed/heimdall/internal/errors"
 	"github.com/PumpkinSeed/heimdall/internal/structs"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	initcommand "github.com/PumpkinSeed/heimdall/pkg/init"
@@ -22,7 +23,7 @@ func NewInit(u *unseal.Unseal) Init {
 func (i Init) Handler(ctx context.Context, req structs.SocketRequest) (structs.SocketResponse, error) {
 	initParams := initcommand.Request{}
 	if err := json.Unmarshal(req.Data, &initParams); err != nil {
-		return structs.SocketResponse{}, err
+		return structs.SocketResponse{}, errors.Wrap(err, "socket unmarshal error", errors.CodeApiSocketInitUnmarshal)
 	}
 
 	init := initcommand.NewInit(i.unseal)
@@ -32,12 +33,12 @@ func (i Init) Handler(ctx context.Context, req structs.SocketRequest) (structs.S
 
 	res, err := init.Initialize(ctx, initParams)
 	if err != nil {
-		return structs.SocketResponse{}, err
+		return structs.SocketResponse{}, errors.Wrap(err, "socket init error", errors.CodeApiSocketInit)
 	}
 
 	data, err := json.Marshal(res)
 	if err != nil {
-		return structs.SocketResponse{}, err
+		return structs.SocketResponse{}, errors.Wrap(err, "socket init error", errors.CodeApiSocketInitMarshal)
 	}
 
 	return structs.SocketResponse{

@@ -7,11 +7,11 @@ import (
 	"crypto/sha512"
 	"encoding/base64"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"hash"
 	"strconv"
 
+	"github.com/PumpkinSeed/heimdall/internal/errors"
 	"github.com/PumpkinSeed/heimdall/pkg/structs"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 )
@@ -19,7 +19,7 @@ import (
 func (t Transit) Hash(ctx context.Context, inputB64 string, algo structs.HashType, format string) (string, error) {
 	input, err := base64.StdEncoding.DecodeString(inputB64)
 	if err != nil {
-		return "", fmt.Errorf("unable to decode input as base64: %v", err)
+		return "", errors.Wrap(err, "transit hash unable to decode input as base64", errors.CodePkgCryptoTransitHashInputFormat)
 	}
 
 	if format == "" {
@@ -33,7 +33,7 @@ func (t Transit) Hash(ctx context.Context, inputB64 string, algo structs.HashTyp
 	switch format {
 	case "hex", "base64":
 	default:
-		return "", fmt.Errorf("unsupported encoding format %s; must be \"hex\" or \"base64\"", format)
+		return "", errors.Newf(errors.CodePkgCryptoTransitHashOutputFormat, "transit hash unsupported encoding format %s; must be \"hex\" or \"base64\"", format)
 	}
 
 	var hf hash.Hash
@@ -47,7 +47,7 @@ func (t Transit) Hash(ctx context.Context, inputB64 string, algo structs.HashTyp
 	case structs.HashType_HashTypeSHA2512:
 		hf = sha512.New()
 	default:
-		return "", fmt.Errorf("unsupported algorithm %s", algo)
+		return "", errors.Newf(errors.CodePkgCryptoTransitHashAlgorithmFormat, "transit hash unsupported algorithm \"%s\"", algo)
 	}
 	hf.Write(input)
 	retBytes := hf.Sum(nil)
@@ -66,7 +66,7 @@ func (t Transit) Hash(ctx context.Context, inputB64 string, algo structs.HashTyp
 func (t Transit) HMAC(ctx context.Context, keyName, inputB64, algo string, keyVersion int, engineName string) (string, error) {
 	key, err := t.GetKey(ctx, keyName, engineName)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "transit hmac get key error", errors.CodePkgCryptoTransitHMACGetKey)
 	}
 
 	if algo == "" {
@@ -82,30 +82,30 @@ func (t Transit) HMAC(ctx context.Context, keyName, inputB64, algo string, keyVe
 		// Allowed
 	case key.MinEncryptionVersion > 0 && keyVersion < key.MinEncryptionVersion:
 		key.Unlock()
-		return "", errors.New("cannot generate HMAC: version is too old (disallowed by policy)")
+		return "", errors.New("transit hmac cannot generate HMAC: version is too old (disallowed by policy)", errors.CodePkgCryptoTransitHMACKeyVersion)
 	}
 
 	k, err := key.HMACKey(keyVersion)
 	if err != nil {
 		key.Unlock()
-		return "", fmt.Errorf("HMAC creation failed: %w", err)
+		return "", errors.New("transit hmac HMAC creation failed", errors.CodePkgCryptoTransitHMAC)
 	}
 	if key == nil {
 		key.Unlock()
-		return "", errors.New("HMAC key value could not be computed")
+		return "", errors.New("transit hmac key value could not be computed", errors.CodePkgCryptoTransitHMACCompute)
 	}
 
 	hashAlgorithm, ok := keysutil.HashTypeMap[algo]
 	if !ok {
 		key.Unlock()
-		return "", fmt.Errorf("unsupported algorithm %q", hashAlgorithm)
+		return "", errors.Newf(errors.CodePkgCryptoTransitHMACUnsupportedAlgo, "transit hmac unsupported algorithm %q", hashAlgorithm)
 	}
 
 	hashAlg := keysutil.HashFuncMap[hashAlgorithm]
 
 	input, err := base64.StdEncoding.DecodeString(inputB64)
 	if err != nil {
-		return "", fmt.Errorf("unable to decode input as base64: %w", err)
+		return "", errors.Wrap(err, "transit hmac unable to decode input as base64", errors.CodePkgCryptoTransitHMACInputFormat)
 	}
 
 	var hf = hmac.New(hashAlg, k)

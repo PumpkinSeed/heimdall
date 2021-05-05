@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 
+	"github.com/PumpkinSeed/heimdall/internal/errors"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/transit"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/utils"
@@ -21,7 +22,7 @@ import (
 func Serve(addr string) error {
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "grpc serve error", errors.CodeApiGrpc)
 	}
 	s := newServer(unseal.Get())
 	gsrv := grpc.NewServer(grpc.StreamInterceptor(
@@ -30,7 +31,11 @@ func Serve(addr string) error {
 	structs.RegisterEncryptionServer(gsrv, s)
 	log.Infof("gRPC server listening on %s", addr)
 
-	return gsrv.Serve(lis)
+	if err := gsrv.Serve(lis); err != nil {
+		return errors.Wrap(err, "grpc serve error", errors.CodeApiGrpc)
+	}
+
+	return nil
 }
 
 type server struct {
@@ -52,6 +57,7 @@ func (s server) CreateKey(ctx context.Context, key *structs.Key) (*structs.KeyRe
 	err := s.transit.CreateKey(ctx, key.Name, key.Type.String(), key.EngineName)
 	if err != nil {
 		log.Errorf("Error with key creation [%s|%s]: %v", key.Name, key.Type, err)
+		return nil, errors.Wrap(err, "grpc create key error", errors.CodeApiGrpcCreateKey)
 	}
 
 	return &structs.KeyResponse{
@@ -65,6 +71,7 @@ func (s server) ReadKey(ctx context.Context, key *structs.KeyName) (*structs.Key
 	k, err := s.transit.GetKey(ctx, key.Name, key.EngineName)
 	if err != nil {
 		log.Errorf("Error with key reading [%s]: %v", key.Name, err)
+		return nil, errors.Wrap(err, "grpc read key error", errors.CodeApiGrpcReadKey)
 	}
 
 	return &structs.KeyResponse{
@@ -81,6 +88,7 @@ func (s server) DeleteKey(ctx context.Context, key *structs.KeyName) (*structs.K
 	err := s.transit.DeleteKey(ctx, key.Name, key.EngineName)
 	if err != nil {
 		log.Errorf("Error with key deletion [%s]: %v", key.Name, err)
+		return nil, errors.Wrap(err, "grpc delete key error", errors.CodeApiGrpcDeleteKey)
 	}
 
 	return &structs.KeyResponse{
@@ -96,6 +104,7 @@ func (s server) ListKeys(ctx context.Context, in *structs.Empty) (*structs.KeyLi
 	keys, err := s.transit.ListKeys(ctx, in.EngineName)
 	if err != nil {
 		log.Errorf("Error getting keys: %v", err)
+		return nil, errors.Wrap(err, "grpc list key error", errors.CodeApiGrpcListKey)
 	}
 
 	var keySlice = make([]*structs.Key, 0, len(keys))
@@ -110,7 +119,7 @@ func (s server) ListKeys(ctx context.Context, in *structs.Empty) (*structs.KeyLi
 		Status:  utils.GetStatus(err),
 		Message: utils.GetMessage(err),
 		Keys:    keySlice,
-	}, err
+	}, nil
 }
 
 func (s server) Encrypt(ctx context.Context, req *structs.EncryptRequest) (*structs.CryptoResult, error) {
@@ -121,6 +130,7 @@ func (s server) Encrypt(ctx context.Context, req *structs.EncryptRequest) (*stru
 	})
 	if err != nil {
 		log.Errorf("Error encription [%s]: %v", req.KeyName, err)
+		return nil, errors.Wrap(err, "grpc encrypt error", errors.CodeApiGrpcEncrypt)
 	}
 
 	return &structs.CryptoResult{
@@ -136,49 +146,54 @@ func (s server) Decrypt(ctx context.Context, req *structs.DecryptRequest) (*stru
 	})
 	if err != nil {
 		log.Errorf("Error decription [%s]: %v", req.KeyName, err)
+		return nil, errors.Wrap(err, "grpc decrypt error", errors.CodeApiGrpcDecrypt)
 	}
 
 	return &structs.CryptoResult{
 		Result: d.Plaintext,
-	}, err
+	}, nil
 }
 
 func (s server) Hash(ctx context.Context, req *structs.HashRequest) (*structs.HashResponse, error) {
 	hash, err := s.transit.Hash(ctx, req.Input, req.Algorithm, req.Format)
 	if err != nil {
 		log.Errorf("Error hashing: %v", err)
+		return nil, errors.Wrap(err, "grpc hash error", errors.CodeApiGrpcHash)
 	}
 
 	return &structs.HashResponse{
 		Result: hash,
-	}, err
+	}, nil
 }
 
 func (s server) GenerateHMAC(ctx context.Context, req *structs.HMACRequest) (*structs.HMACResponse, error) {
 	hmac, err := s.transit.HMAC(ctx, req.KeyName, req.Input, req.Algorithm, int(req.KeyVersion), req.EngineName)
 	if err != nil {
 		log.Errorf("Error HMAC generating: %v", err)
+		return nil, errors.Wrap(err, "grpc HMAC error", errors.CodeApiGrpcHMAC)
 	}
 
 	return &structs.HMACResponse{
 		Result: hmac,
-	}, err
+	}, nil
 }
 
 func (s server) Sign(ctx context.Context, req *structs.SignParameters) (*structs.SignResponse, error) {
 	signature, err := s.transit.Sign(ctx, req)
 	if err != nil {
 		log.Errorf("Error generating sign: %v", err)
+		return nil, errors.Wrap(err, "grpc sign error", errors.CodeApiGrpcSign)
 	}
-	return signature, err
+	return signature, nil
 }
 
 func (s server) VerifySigned(ctx context.Context, req *structs.VerificationRequest) (*structs.VerificationResponse, error) {
 	verificationResult, err := s.transit.VerifySign(ctx, req)
 	if err != nil {
 		log.Errorf("Error validating signature %v", err)
+		return nil, errors.Wrap(err, "grpc verify sign error", errors.CodeApiGrpcVerifySign)
 	}
-	return verificationResult, err
+	return verificationResult, nil
 }
 
 func (s server) Health(ctx context.Context, req *structs.HealthRequest) (*structs.HealthResponse, error) {

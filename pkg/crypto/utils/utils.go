@@ -2,7 +2,8 @@ package utils
 
 import (
 	"crypto/cipher"
-	"fmt"
+
+	"github.com/PumpkinSeed/heimdall/internal/errors"
 )
 
 // Versions of the AESGCM storage methodology
@@ -37,6 +38,6 @@ func BarrierDecrypt(path string, gcm cipher.AEAD, cipher []byte) ([]byte, error)
 		}
 		return gcm.Open(out, nonce, raw, aad)
 	default:
-		return nil, fmt.Errorf("version bytes mis-match")
+		return nil, errors.New("version bytes mis-match", errors.CodePkgCryptoUtilsBarrierDecrypt)
 	}
 }
