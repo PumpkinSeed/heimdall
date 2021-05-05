@@ -74,12 +74,12 @@ func (s *server) checkToken(next http.Handler) http.Handler {
 		t := r.Header.Get("authorization")
 		found, err := s.ts.CheckToken(r.Context(), t)
 		if err != nil {
-			log.Errorf("%v", err)
+			log.Debugf("%v", err)
 			http.Error(w, "please provide valid token", http.StatusBadRequest)
 			return
 		}
 		if !found {
-			log.Errorf("token not found %s", t)
+			log.Debugf("token not found %s", t)
 			http.Error(w, "please provide valid token", http.StatusBadRequest)
 			return
 		}

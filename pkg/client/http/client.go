@@ -35,7 +35,7 @@ func (o *Options) Setup() client.Client {
 		log.Error(errors.Wrap(err, "vault client create error", errors.CodeClientHttpSetupCreateClient))
 	}
 	if o.Token != "" {
-		vaultClient.AddHeader("token", o.Token)
+		vaultClient.AddHeader("authorization", o.Token)
 	}
 	if len(o.URLs) == 0 {
 		c.cs = []*httpClient{{vaultClient}}
@@ -49,7 +49,7 @@ func (o *Options) Setup() client.Client {
 				continue
 			}
 			if o.Token != "" {
-				duplicate.AddHeader("token", o.Token)
+				duplicate.AddHeader("authorization", o.Token)
 			}
 			cs = append(cs, &httpClient{duplicate})
 		}
