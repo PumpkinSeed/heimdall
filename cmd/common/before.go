@@ -25,6 +25,8 @@ func Before(ctx *cli.Context) error {
 		return errors.Wrap(err, "hook setup error", errors.CodeCmdCommonBefore)
 	}
 
+	initBanner(ctx)
+
 	return nil
 }
 

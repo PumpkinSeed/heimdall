@@ -6,6 +6,7 @@ const (
 	NameVerbose       = "verbose"
 	NameLogOutput     = "log-output"
 	NameLogAdditional = "log-additional"
+	NameQuiet         = "quiet"
 
 	NameGrpc               = "grpc"
 	NameHttp               = "http"
@@ -18,6 +19,8 @@ const (
 	NameInMemory           = "in-memory"
 	NameDisableHttp        = "disable-http"
 	NameDisableGrpc        = "disable-grpc"
+	NameTokenID            = "token-id"
+	NameRootTokenID        = "root-token-id"
 
 	grpcDefaultAddr    = "0.0.0.0:9090"
 	httpDefaultAddr    = "0.0.0.0:8080"
@@ -39,6 +42,10 @@ var (
 	LogAdditional = &cli.StringFlag{
 		Name:  NameLogAdditional,
 		Usage: "Additional data for logger\nSyslog example: \"network=tcp;address=localhost:6060\"",
+	}
+	Quiet = &cli.BoolFlag{
+		Name:  NameQuiet,
+		Usage: "Disable banner printing to logger's output",
 	}
 
 	Grpc = &cli.StringFlag{
@@ -100,5 +107,13 @@ var (
 		Name:  NameDisableHttp,
 		Usage: "",
 		Value: false,
+	}
+	TokenID = &cli.StringFlag{
+		Name:  NameTokenID,
+		Usage: "Add custom token ID",
+	}
+	RootTokenID = &cli.StringFlag{
+		Name:  NameRootTokenID,
+		Usage: "Previously got root token id",
 	}
 )

@@ -4,20 +4,16 @@ import (
 	"context"
 	"crypto/aes"
 	"crypto/rand"
-	"sync"
 
 	"github.com/PumpkinSeed/heimdall/internal/errors"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	"github.com/PumpkinSeed/heimdall/pkg/seal"
+	"github.com/PumpkinSeed/heimdall/pkg/token"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
-	"github.com/hashicorp/vault/sdk/helper/locksutil"
-	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault"
 	log "github.com/sirupsen/logrus"
 )
-
-const TokenLength = 24
 
 type Request struct {
 	SecretShares    int `json:"secret_shares"`
@@ -32,54 +28,17 @@ type Result struct {
 var (
 	// shamirType is the type for the seal config
 	shamirType = "shamir"
-
-	// idPrefix is the prefix used to store tokens for their
-	// primary ID based index
-	idPrefix = "id/"
-
-	// accessorPrefix is the prefix used to store the index from
-	// Accessor to Token ID
-	accessorPrefix = "accessor/"
-
-	// parentPrefix is the prefix used to store tokens for their
-	// secondary parent based index
-	parentPrefix = "parent/"
-
-	// tokenSubPath is the sub-path used for the token store
-	// view. This is nested under the system view.
-	tokenSubPath = "token/"
-
-	// rolesPrefix is the prefix used to store role information
-	rolesPrefix = "roles/"
 )
 
 type Init struct {
 	unseal *unseal.Unseal
-
-	salts               map[string]*salt.Salt
-	baseBarrierView     *vault.BarrierView
-	idBarrierView       *vault.BarrierView
-	accessorBarrierView *vault.BarrierView
-	parentBarrierView   *vault.BarrierView
-	rolesBarrierView    *vault.BarrierView
-
-	saltLock   sync.RWMutex
-	tokenLocks []*locksutil.LockEntry
+	ts     *token.TokenStore
 }
 
 func NewInit(unseal *unseal.Unseal) *Init {
-	view := vault.NewBarrierView(unseal.SecurityBarrier, "sys/"+tokenSubPath)
-
 	return &Init{
-		unseal:              unseal,
-		salts:               make(map[string]*salt.Salt),
-		baseBarrierView:     view,
-		idBarrierView:       view.SubView(idPrefix),
-		accessorBarrierView: view.SubView(accessorPrefix),
-		parentBarrierView:   view.SubView(parentPrefix),
-		rolesBarrierView:    view.SubView(rolesPrefix),
-		saltLock:            sync.RWMutex{},
-		tokenLocks:          locksutil.CreateLocks(),
+		unseal: unseal,
+		ts:     token.NewTokenStore(unseal),
 	}
 }
 
@@ -128,7 +87,7 @@ func (init *Init) Initialize(ctx context.Context, req Request) (Result, error) {
 		return Result{}, errors.Wrap(err, "init failed to store keys", errors.CodePkgInitInitializeSealStoredKeys)
 	}
 
-	rootToken, err := init.getRootToken(ctx)
+	rootToken, err := init.ts.GenRootToken(ctx, "")
 	if err != nil {
 		return Result{}, errors.Wrap(err, "init get root token error", errors.CodePkgInitGetRootToken)
 	}

@@ -10,8 +10,13 @@ import (
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/utils"
 	"github.com/PumpkinSeed/heimdall/pkg/healthcheck"
 	"github.com/PumpkinSeed/heimdall/pkg/structs"
+	"github.com/PumpkinSeed/heimdall/pkg/token"
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 func Serve(addr string) error {
@@ -19,8 +24,11 @@ func Serve(addr string) error {
 	if err != nil {
 		return errors.Wrap(err, "grpc serve error", errors.CodeApiGrpc)
 	}
-	gsrv := grpc.NewServer()
-	structs.RegisterEncryptionServer(gsrv, newServer(unseal.Get()))
+	s := newServer(unseal.Get())
+	gsrv := grpc.NewServer(grpc.StreamInterceptor(
+		grpc_logrus.StreamServerInterceptor(log.NewEntry(log.New())),
+	), grpc.UnaryInterceptor(s.AuthInterceptor()))
+	structs.RegisterEncryptionServer(gsrv, s)
 	log.Infof("gRPC server listening on %s", addr)
 
 	if err := gsrv.Serve(lis); err != nil {
@@ -33,6 +41,7 @@ func Serve(addr string) error {
 type server struct {
 	transit transit.Transit
 	health  healthcheck.Healthcheck
+	ts      *token.TokenStore
 	structs.UnimplementedEncryptionServer
 }
 
@@ -40,6 +49,7 @@ func newServer(u *unseal.Unseal) server {
 	return server{
 		transit: transit.New(u),
 		health:  healthcheck.New(u),
+		ts:      token.NewTokenStore(u),
 	}
 }
 
@@ -188,4 +198,26 @@ func (s server) VerifySigned(ctx context.Context, req *structs.VerificationReque
 
 func (s server) Health(ctx context.Context, req *structs.HealthRequest) (*structs.HealthResponse, error) {
 	return s.health.Check(ctx), nil
+}
+
+func (s server) AuthInterceptor() grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+		md, ok := metadata.FromIncomingContext(ctx)
+		if !ok {
+			return nil, status.Errorf(codes.InvalidArgument, "Retrieving metadata is failed")
+		}
+		apiKey := md.Get("authorization")
+		if len(apiKey) == 0 {
+			return nil, status.Errorf(codes.Unauthenticated, "Authorization token is not supplied")
+		}
+		validToken, err := s.ts.CheckToken(ctx, apiKey[0])
+		if err != nil {
+			return nil, status.Error(codes.Unauthenticated, err.Error())
+		}
+		if !validToken {
+			return nil, status.Error(codes.Unauthenticated, "invalid api key")
+		}
+
+		return handler(ctx, req)
+	}
 }

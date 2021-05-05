@@ -11,7 +11,10 @@ import (
 
 func TestClient(t *testing.T) {
 	t.Skip("Skip integration test")
-	client := Options{URLs: []string{"127.0.0.1:9090"}}.Setup()
+	client := Options{
+		URLs:   []string{"127.0.0.1:9090"},
+		APIKey: "s.YKpsAvcLjjFyeWfwZihktolk",
+	}.Setup()
 	ctx := context.Background()
 	key, err := client.CreateKey(ctx, &structs.Key{
 		Name: fmt.Sprintf("some_key_%d", time.Now().UTC().UnixNano()),

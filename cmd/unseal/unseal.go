@@ -10,8 +10,9 @@ import (
 )
 
 var Cmd = &cli.Command{
-	Name:   "unseal",
-	Action: action,
+	Name:    "unseal",
+	Aliases: []string{"open-the-bifrost"},
+	Action:  action,
 	Flags: []cli.Flag{
 		flags.Socket,
 	},

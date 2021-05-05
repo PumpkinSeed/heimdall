@@ -11,7 +11,10 @@ import (
 
 func TestClient(t *testing.T) {
 	t.Skip("Skip integration test")
-	opt := &Options{URLs: []string{"http://0.0.0.0:8080", "http://0.0.0.0:8080", "http://0.0.0.0:8080", "http://0.0.0.0:8080", "http://0.0.0.0:8080"}}
+	opt := &Options{
+		URLs:  []string{"http://0.0.0.0:8080", "http://0.0.0.0:8080", "http://0.0.0.0:8080", "http://0.0.0.0:8080", "http://0.0.0.0:8080"},
+		Token: "s.AE6uDt5Scc2qt9xzY1ZYv3rg",
+	}
 	client := opt.Setup()
 	ctx := context.Background()
 	key, err := client.CreateKey(ctx, &structs.Key{

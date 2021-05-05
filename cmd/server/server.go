@@ -10,6 +10,7 @@ import (
 	"github.com/PumpkinSeed/heimdall/internal/errors"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	"github.com/PumpkinSeed/heimdall/pkg/storage"
+	"github.com/PumpkinSeed/heimdall/pkg/token"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault"
 	log "github.com/sirupsen/logrus"
@@ -17,9 +18,10 @@ import (
 )
 
 var Cmd = &cli.Command{
-	Name:   "server",
-	Action: serve,
-	Before: setup,
+	Name:    "server",
+	Aliases: []string{"defend", "defend-your-nation", "defend-asgard", "asgard-is-counting-on-you"},
+	Action:  serve,
+	Before:  setup,
 	Flags: []cli.Flag{
 		flags.Grpc,
 		flags.HTTP,
@@ -31,6 +33,7 @@ var Cmd = &cli.Command{
 		flags.DefaultEnginePath,
 		flags.DisableGrpc,
 		flags.DisableHttp,
+		flags.TokenID,
 	},
 }
 
@@ -38,7 +41,7 @@ func serve(ctx *cli.Context) error {
 	finished := make(chan struct{}, 1)
 
 	if err := setupEnvironment(ctx); err != nil {
-		return errors.Wrap(err, "", errors.CodeCmdServer)
+		return errors.Wrap(err, "server setup error", errors.CodeCmdServer)
 	}
 
 	if !ctx.Bool(flags.NameDisableGrpc) {
@@ -67,13 +70,23 @@ func setupEnvironment(ctx *cli.Context) error {
 	u.SetBackend(b)
 	u.SetSecurityBarrier(sb)
 	u.SetDefaultEnginePath(ctx.String(flags.NameDefaultEnginePath))
-	if ctx.Bool(flags.NameInMemory) {
-		err := u.DevMode(context.Background())
-		if err != nil {
-			return errors.Wrap(err, "environment setup dev mode error", errors.CodeCmdServerEnvSetup)
-		}
+
+	return checkAndSetDevMode(ctx, u)
+}
+
+func checkAndSetDevMode(ctx *cli.Context, u *unseal.Unseal) error {
+	if !ctx.Bool(flags.NameInMemory) {
 		return nil
 	}
+	if err := u.DevMode(context.Background()); err != nil {
+		return errors.Wrap(err, "environment setup dev mode error", errors.CodeCmdServerDevModeSetup)
+	}
+
+	tokenResp, err := token.NewTokenStore(u).GenRootToken(context.Background(), ctx.String(flags.NameTokenID))
+	if err != nil {
+		return errors.Wrap(err, "server dev mode token create error", errors.CodeCmdServerDevModeTokenCreate)
+	}
+	log.Infof("generated token: %s", tokenResp.ID)
 
 	return nil
 }
