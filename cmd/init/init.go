@@ -12,8 +12,9 @@ import (
 )
 
 var Cmd = &cli.Command{
-	Name:   "init",
-	Action: initAction,
+	Name:    "init",
+	Aliases: []string{"prepare", "prepare-for-battle"},
+	Action:  initAction,
 	Flags: []cli.Flag{
 		flags.Socket,
 		flags.Threshold,

@@ -6,6 +6,7 @@ const (
 	NameVerbose       = "verbose"
 	NameLogOutput     = "log-output"
 	NameLogAdditional = "log-additional"
+	NameQuiet         = "quiet"
 
 	NameGrpc               = "grpc"
 	NameHttp               = "http"
@@ -41,6 +42,10 @@ var (
 	LogAdditional = &cli.StringFlag{
 		Name:  NameLogAdditional,
 		Usage: "Additional data for logger\nSyslog example: \"network=tcp;address=localhost:6060\"",
+	}
+	Quiet = &cli.BoolFlag{
+		Name:  NameQuiet,
+		Usage: "Disable banner printing to logger's output",
 	}
 
 	Grpc = &cli.StringFlag{

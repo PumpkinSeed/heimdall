@@ -17,9 +17,10 @@ import (
 )
 
 var Cmd = &cli.Command{
-	Name:   "server",
-	Action: serve,
-	Before: setup,
+	Name:    "server",
+	Aliases: []string{"defend", "defend-your-nation", "defend-asgard", "asgard-is-counting-on-you"},
+	Action:  serve,
+	Before:  setup,
 	Flags: []cli.Flag{
 		flags.Grpc,
 		flags.HTTP,

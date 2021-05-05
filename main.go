@@ -21,6 +21,7 @@ var app = cli.App{
 		token.Cmd,
 	},
 	Flags: []cli.Flag{
+		flags.Quiet,
 		flags.Verbose,
 		flags.LogOutput,
 		flags.LogAdditional,

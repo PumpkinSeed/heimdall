@@ -25,6 +25,8 @@ func Before(ctx *cli.Context) error {
 		return err
 	}
 
+	initBanner(ctx)
+
 	return nil
 }
 
