@@ -151,7 +151,7 @@ func (u *Unseal) DevMode(ctx context.Context) error {
 	u.SetDefaultEnginePath("transit/")
 	if err := u.PostProcess(ctx, map[string]string{"transit/": "logical/00000000-0000-0000-0000-000000000000"});
 		err != nil {
-		return errors.Wrap(err, "", errors.CodePkgCryptoUnsealDevModePostProcess)
+		return errors.Wrap(err, "unseal dev mode post process error", errors.CodePkgCryptoUnsealDevModePostProcess)
 	}
 	return nil
 }
@@ -234,7 +234,7 @@ func (u *Unseal) CheckEngine(path string) (bool, error) {
 		return false, err
 	}
 	if sealed {
-		return false, errors.New("heimdall is sealed")
+		return false, ErrSealed
 	}
 	return false, nil
 }

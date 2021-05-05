@@ -68,7 +68,7 @@ func AeadForTerm(kr *vault.Keyring, term uint32) (cipher.AEAD, error) {
 	// Create a new aead
 	aead, err := AeadFromKey(key.Value)
 	if err != nil {
-		return nil, errors.Wrap(err, "", errors.CodePkgCryptoKeyringAeadForTermFromKey)
+		return nil, errors.Wrap(err, "keyring aead for term from key error", errors.CodePkgCryptoKeyringAeadForTermFromKey)
 	}
 
 	return aead, nil

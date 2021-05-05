@@ -46,12 +46,12 @@ func (o Options) Setup() client.Client {
 func buildSecurityBarrier() (physical.Backend, vault.SecurityBarrier, error) {
 	db, err := inmem.NewInmem(nil, logger.Of(log.StandardLogger()))
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "", errors.CodeClientDevSetupBarrierPhysical)
+		return nil, nil, errors.Wrap(err, "dev client physical database init error", errors.CodeClientDevSetupBarrierPhysical)
 	}
 
 	sb, err := vault.NewAESGCMBarrier(db)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "", errors.CodeClientDevSetupBarrierLogical)
+		return nil, nil, errors.Wrap(err, "dev client AES GCM init error", errors.CodeClientDevSetupBarrierLogical)
 	}
 
 	return db, sb, nil
