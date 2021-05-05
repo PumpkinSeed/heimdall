@@ -19,8 +19,9 @@ const defaultEnginePath = "transit/"
 
 type Options struct {
 	*api.Config
-	EngineName string
 	URLs       []string
+	EngineName string
+	Token      string
 }
 
 func (o *Options) Setup() client.Client {
@@ -29,6 +30,10 @@ func (o *Options) Setup() client.Client {
 	}
 	c := proxyClient{o: *o}
 	vaultClient, _ := api.NewClient(o.Config)
+	if o.Token != "" {
+		vaultClient.AddHeader("token", o.Token)
+	}
+
 	if len(o.URLs) == 0 {
 		c.cs = []*httpClient{{vaultClient}}
 	} else {
@@ -38,6 +43,9 @@ func (o *Options) Setup() client.Client {
 			duplicate, err := vaultClient.Clone()
 			if err != nil {
 				panic(err)
+			}
+			if o.Token != "" {
+				duplicate.AddHeader("token", o.Token)
 			}
 			cs = append(cs, &httpClient{duplicate})
 		}

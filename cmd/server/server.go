@@ -9,6 +9,7 @@ import (
 	"github.com/PumpkinSeed/heimdall/internal/api/socket"
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/unseal"
 	"github.com/PumpkinSeed/heimdall/pkg/storage"
+	"github.com/PumpkinSeed/heimdall/pkg/token"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault"
 	log "github.com/sirupsen/logrus"
@@ -30,6 +31,7 @@ var Cmd = &cli.Command{
 		flags.DefaultEnginePath,
 		flags.DisableGrpc,
 		flags.DisableHttp,
+		flags.TokenID,
 	},
 }
 
@@ -66,9 +68,23 @@ func setupEnvironment(ctx *cli.Context) error {
 	u.SetBackend(b)
 	u.SetSecurityBarrier(sb)
 	u.SetDefaultEnginePath(ctx.String(flags.NameDefaultEnginePath))
-	if ctx.Bool(flags.NameInMemory) {
-		return u.DevMode(context.Background())
+
+	return checkAndSetDevMode(ctx, u)
+}
+
+func checkAndSetDevMode(ctx *cli.Context, u *unseal.Unseal) error {
+	if !ctx.Bool(flags.NameInMemory) {
+		return nil
 	}
+	if err := u.DevMode(context.Background()); err != nil {
+		return err
+	}
+
+	tokenResp, err := token.NewTokenStore(u).GenRootToken(context.Background(), ctx.String(flags.NameTokenID))
+	if err != nil {
+		return err
+	}
+	log.Infof("generated token: %s", tokenResp.ID)
 
 	return nil
 }

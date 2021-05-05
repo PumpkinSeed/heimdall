@@ -217,11 +217,18 @@ func (u *Unseal) Storage(path string) logical.Storage {
 	return u.storage[path]
 }
 
-func (u *Unseal) CheckEngine(path string) bool {
+func (u *Unseal) CheckEngine(path string) (bool, error) {
 	if _, ok := u.storage[path]; ok {
-		return true
+		return true, nil
 	}
-	return false
+	sealed, err := u.SecurityBarrier.Sealed()
+	if err != nil {
+		return false, err
+	}
+	if sealed {
+		return false, errors.New("heimdall is sealed")
+	}
+	return false, nil
 }
 
 // SetMasterKey is only for testing purpose

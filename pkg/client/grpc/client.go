@@ -9,6 +9,11 @@ import (
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/metadata"
+)
+
+const (
+	authorizationHeader = "authorization"
 )
 
 type Options struct {
@@ -16,6 +21,7 @@ type Options struct {
 	ServerAddr         string
 	ServerHostOverride string
 	EngineName         string
+	APIKey             string
 	URLs               []string
 	TLS                bool
 }
@@ -43,7 +49,8 @@ func buildConnections(o Options) []grpc.ClientConnInterface {
 }
 
 func buildDialOptions(o Options) []grpc.DialOption {
-	var res []grpc.DialOption
+	res := []grpc.DialOption{}
+	res = append(res, grpc.WithUnaryInterceptor(buildAuthInterceptor(o)))
 	if o.TLS {
 		creds, err := credentials.NewClientTLSFromFile(o.CaFile, o.ServerHostOverride)
 		if err != nil {
@@ -57,6 +64,14 @@ func buildDialOptions(o Options) []grpc.DialOption {
 	res = append(res, grpc.WithBlock())
 
 	return res
+}
+
+func buildAuthInterceptor(o Options) grpc.UnaryClientInterceptor {
+	return func(ctx context.Context, method string, req, reply interface{},
+		cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+		headers := metadata.Pairs(authorizationHeader, o.APIKey)
+		return invoker(metadata.NewOutgoingContext(ctx, headers), method, req, reply, cc, opts...)
+	}
 }
 
 type proxyClient struct {

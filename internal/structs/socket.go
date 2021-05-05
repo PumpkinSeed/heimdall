@@ -9,6 +9,7 @@ const (
 	SocketUnknown = iota
 	SocketUnseal
 	SocketInit
+	TokenCreate
 )
 
 type SocketType int
