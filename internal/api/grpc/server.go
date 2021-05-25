@@ -232,6 +232,14 @@ func (s server) AuthInterceptor() grpc.UnaryServerInterceptor {
 }
 
 func getEngineName(ctx context.Context) string {
-	return ctx.Value("EngineName").(string)
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return ""
+	}
+	en := md.Get("EngineName")
+	if len(en) > 0 {
+		return en[0]
+	}
+	return ""
 }
 

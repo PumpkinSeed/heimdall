@@ -16,6 +16,7 @@ import (
 const (
 	authorizationHeader = "authorization"
 	engineNameHeader    = "engineName"
+	defaultEnginePath   = "transit/"
 )
 
 type Options struct {
@@ -53,8 +54,7 @@ func buildConnections(o Options) []grpc.ClientConnInterface {
 
 func buildDialOptions(o Options) []grpc.DialOption {
 	res := []grpc.DialOption{
-		grpc.WithUnaryInterceptor(buildAuthInterceptor(o)),
-		grpc.WithUnaryInterceptor(buildEngineNameInterceptor(o)),
+		grpc.WithUnaryInterceptor(buildInterceptor(o)),
 	}
 	if o.TLS {
 		creds, err := credentials.NewClientTLSFromFile(o.CaFile, o.ServerHostOverride)
@@ -72,20 +72,23 @@ func buildDialOptions(o Options) []grpc.DialOption {
 	return res
 }
 
-func buildAuthInterceptor(o Options) grpc.UnaryClientInterceptor {
+func buildInterceptor(o Options) grpc.UnaryClientInterceptor {
 	return func(ctx context.Context, method string, req, reply interface{},
 		cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-		headers := metadata.Pairs(authorizationHeader, o.APIKey)
+		headers := metadata.Pairs(
+			authorizationHeader, o.APIKey,
+			engineNameHeader, getEngineName(o),
+		)
 		return invoker(metadata.NewOutgoingContext(ctx, headers), method, req, reply, cc, opts...)
 	}
 }
 
-func buildEngineNameInterceptor(o Options) grpc.UnaryClientInterceptor {
-	return func(ctx context.Context, method string, req, reply interface{},
-		cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-		headers := metadata.Pairs(engineNameHeader, o.EngineName)
-		return invoker(metadata.NewOutgoingContext(ctx, headers), method, req, reply, cc, opts...)
+func getEngineName(o Options) string {
+	en := o.EngineName
+	if en == "" {
+		return defaultEnginePath
 	}
+	return en
 }
 
 type proxyClient struct {
