@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	github.com/dimiro1/banner v1.1.0
+	github.com/emvi/null v1.3.1
 	github.com/go-chi/chi/v5 v5.0.2
 	github.com/golang/protobuf v1.5.2
 	github.com/gorilla/websocket v1.4.2 // indirect

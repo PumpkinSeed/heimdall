@@ -83,6 +83,115 @@ func (t Transit) DeleteKey(ctx context.Context, name, engineName string) error {
 	return err
 }
 
+func (t Transit) UpdateKeyConfiguration(ctx context.Context, name, engineName string, config KeyConfiguration) error {
+	// TODO add error handling
+	p, err := t.GetKey(ctx, name, engineName)
+	if err != nil {
+		return err
+	}
+
+	persistNeeded := false
+
+	if config.MinDecryptionVersion.Valid {
+		minDecryptionVersion := config.MinDecryptionVersion.Int64
+
+		if minDecryptionVersion < 0 {
+			//return logical.ErrorResponse("min decryption version cannot be negative"), nil
+			return errors.New("", errors.Code(-1)) // TODO
+		}
+
+		if minDecryptionVersion == 0 {
+			minDecryptionVersion = 1
+			// TODO log it ("since Vault 0.3, transit key numbering starts at 1; forcing minimum to 1")
+		}
+
+		if minDecryptionVersion != int64(p.MinDecryptionVersion) {
+			if minDecryptionVersion > int64(p.LatestVersion) {
+				return errors.Newf(errors.Code(-1),
+					"cannot set min decryption version of %d, latest key version is %d",
+					minDecryptionVersion, p.LatestVersion) // TODO
+			}
+			p.MinDecryptionVersion = int(minDecryptionVersion)
+			persistNeeded = true
+		}
+	}
+
+	if config.MinEncryptionVersion.Valid {
+		minEncryptionVersion := config.MinEncryptionVersion.Int64
+
+		if minEncryptionVersion < 0 {
+			return errors.New("", errors.Code(-1)) // TODO
+			//return logical.ErrorResponse("min encryption version cannot be negative"), nil
+		}
+
+		if minEncryptionVersion != int64(p.MinEncryptionVersion) {
+			if minEncryptionVersion > int64(p.LatestVersion) {
+				return errors.Newf(errors.Code(-1),
+					"cannot set min encryption version of %d, latest key version is %d",
+					minEncryptionVersion, p.LatestVersion) // TODO
+			}
+			p.MinEncryptionVersion = int(minEncryptionVersion)
+			persistNeeded = true
+		}
+	}
+
+	// Check here to get the final picture after the logic on each
+	// individually. MinDecryptionVersion will always be 1 or above.
+	if p.MinEncryptionVersion > 0 &&
+		p.MinEncryptionVersion < p.MinDecryptionVersion {
+		return errors.Newf(errors.Code(-1),
+			"cannot set min encryption/decryption values; min encryption version of %d must be greater than or equal to min decryption version of %d",
+			p.MinEncryptionVersion, p.MinDecryptionVersion) // TODO
+	}
+
+	if config.DeletionAllowed.Valid {
+		allowDeletion := config.DeletionAllowed.Bool
+		if allowDeletion != p.DeletionAllowed {
+			p.DeletionAllowed = allowDeletion
+			persistNeeded = true
+		}
+	}
+
+	// Add this as a guard here before persisting since we now require the min
+	// decryption version to start at 1; even if it's not explicitly set here,
+	// force the upgrade
+	if p.MinDecryptionVersion == 0 {
+		p.MinDecryptionVersion = 1
+		persistNeeded = true
+	}
+
+	if config.Exportable.Valid {
+		exportable := config.Exportable.Bool
+		// Don't unset the already set value
+		if exportable && !p.Exportable {
+			p.Exportable = exportable
+			persistNeeded = true
+		}
+	}
+
+	if config.AllowPlaintextBackup.Valid {
+		allowPlaintextBackup := config.AllowPlaintextBackup.Bool
+		// Don't unset the already set value
+		if allowPlaintextBackup && !p.AllowPlaintextBackup {
+			p.AllowPlaintextBackup = allowPlaintextBackup
+			persistNeeded = true
+		}
+	}
+
+	if !persistNeeded {
+		return nil
+	}
+
+	switch {
+	case p.MinAvailableVersion > p.MinEncryptionVersion:
+		return errors.New("min encryption version should not be less than min available version", errors.Code(-1)) // TODO
+	case p.MinAvailableVersion > p.MinDecryptionVersion:
+		return errors.New("min decryption version should not be less then min available version", errors.Code(-1)) // TODO
+	}
+
+	return p.Persist(ctx, t.u.Storage(engineName)) // TODO
+}
+
 func getKeyType(typ string) keysutil.KeyType {
 	if v, ok := structs.EncryptionType_value[typ]; ok {
 		return keysutil.KeyType(v)
