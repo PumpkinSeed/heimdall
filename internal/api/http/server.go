@@ -346,9 +346,7 @@ func (s server) Sign(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req.EngineName = engineName
-
-	signature, err := s.transit.Sign(r.Context(), &req)
+	signature, err := s.transit.Sign(r.Context(), &req, engineName)
 	if err != nil {
 		log.Debugf("Error generating sign: %v", err)
 		log.Error(errors.Wrap(err, "http transit call sign error", errors.CodeApiHTTPSign))
@@ -374,9 +372,7 @@ func (s server) VerifySigned(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req.EngineName = engineName
-
-	verificationResult, err := s.transit.VerifySign(r.Context(), &req)
+	verificationResult, err := s.transit.VerifySign(r.Context(), &req, engineName)
 	if err != nil {
 		log.Debugf("Error validating signature %v", err)
 		log.Error(errors.Wrap(err, "http transit call verify sign error", errors.CodeApiHTTPVerifySign))

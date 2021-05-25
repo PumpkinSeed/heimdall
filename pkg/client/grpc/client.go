@@ -15,6 +15,7 @@ import (
 
 const (
 	authorizationHeader = "authorization"
+	engineNameHeader    = "engineName"
 )
 
 type Options struct {
@@ -51,8 +52,10 @@ func buildConnections(o Options) []grpc.ClientConnInterface {
 }
 
 func buildDialOptions(o Options) []grpc.DialOption {
-	res := []grpc.DialOption{}
-	res = append(res, grpc.WithUnaryInterceptor(buildAuthInterceptor(o)))
+	res := []grpc.DialOption{
+		grpc.WithUnaryInterceptor(buildAuthInterceptor(o)),
+		grpc.WithUnaryInterceptor(buildEngineNameInterceptor(o)),
+	}
 	if o.TLS {
 		creds, err := credentials.NewClientTLSFromFile(o.CaFile, o.ServerHostOverride)
 		if err != nil {
@@ -77,6 +80,14 @@ func buildAuthInterceptor(o Options) grpc.UnaryClientInterceptor {
 	}
 }
 
+func buildEngineNameInterceptor(o Options) grpc.UnaryClientInterceptor {
+	return func(ctx context.Context, method string, req, reply interface{},
+		cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+		headers := metadata.Pairs(engineNameHeader, o.EngineName)
+		return invoker(metadata.NewOutgoingContext(ctx, headers), method, req, reply, cc, opts...)
+	}
+}
+
 type proxyClient struct {
 	o           Options
 	connections []grpc.ClientConnInterface
@@ -90,7 +101,6 @@ func (c *proxyClient) next() structs.EncryptionClient {
 }
 
 func (c *proxyClient) CreateKey(ctx context.Context, key *structs.Key) (*structs.KeyResponse, error) {
-	key.EngineName = c.o.EngineName
 	createKey, err := c.next().CreateKey(ctx, key)
 	if err != nil {
 		return nil, errors.Wrap(err, "grpc client create key error", errors.CodeClientGrpcCreateKey)
@@ -99,7 +109,7 @@ func (c *proxyClient) CreateKey(ctx context.Context, key *structs.Key) (*structs
 }
 
 func (c *proxyClient) ReadKey(ctx context.Context, keyName string) (*structs.KeyResponse, error) {
-	key, err := c.next().ReadKey(ctx, &structs.KeyName{Name: keyName, EngineName: c.o.EngineName})
+	key, err := c.next().ReadKey(ctx, &structs.KeyName{Name: keyName})
 	if err != nil {
 		return nil, errors.Wrap(err, "grpc client read key error", errors.CodeClientGrpcReadKey)
 	}
@@ -107,7 +117,7 @@ func (c *proxyClient) ReadKey(ctx context.Context, keyName string) (*structs.Key
 }
 
 func (c *proxyClient) DeleteKey(ctx context.Context, keyName string) (*structs.KeyResponse, error) {
-	key, err := c.next().DeleteKey(ctx, &structs.KeyName{Name: keyName, EngineName: c.o.EngineName})
+	key, err := c.next().DeleteKey(ctx, &structs.KeyName{Name: keyName})
 	if err != nil {
 		return nil, errors.Wrap(err, "grpc client delete key error", errors.CodeClientGrpcDeleteKey)
 	}
@@ -115,7 +125,7 @@ func (c *proxyClient) DeleteKey(ctx context.Context, keyName string) (*structs.K
 }
 
 func (c *proxyClient) ListKeys(ctx context.Context) (*structs.KeyListResponse, error) {
-	keys, err := c.next().ListKeys(ctx, &structs.Empty{EngineName: c.o.EngineName})
+	keys, err := c.next().ListKeys(ctx, &structs.Empty{})
 	if err != nil {
 		return nil, errors.Wrap(err, "grpc client list keys error", errors.CodeClientGrpcListKey)
 	}
@@ -123,7 +133,6 @@ func (c *proxyClient) ListKeys(ctx context.Context) (*structs.KeyListResponse, e
 }
 
 func (c *proxyClient) Encrypt(ctx context.Context, encrypt *structs.EncryptRequest) (*structs.CryptoResult, error) {
-	encrypt.EngineName = c.o.EngineName
 	result, err := c.next().Encrypt(ctx, encrypt)
 	if err != nil {
 		return nil, errors.Wrap(err, "grpc client encrypt error", errors.CodeClientGrpcEncrypt)
@@ -132,7 +141,6 @@ func (c *proxyClient) Encrypt(ctx context.Context, encrypt *structs.EncryptReque
 }
 
 func (c *proxyClient) Decrypt(ctx context.Context, decrypt *structs.DecryptRequest) (*structs.CryptoResult, error) {
-	decrypt.EngineName = c.o.EngineName
 	result, err := c.next().Decrypt(ctx, decrypt)
 	if err != nil {
 		return nil, errors.Wrap(err, "grpc client decrypt error", errors.CodeClientGrpcDecrypt)
@@ -141,7 +149,6 @@ func (c *proxyClient) Decrypt(ctx context.Context, decrypt *structs.DecryptReque
 }
 
 func (c *proxyClient) Hash(ctx context.Context, hash *structs.HashRequest) (*structs.HashResponse, error) {
-	hash.EngineName = c.o.EngineName
 	response, err := c.next().Hash(ctx, hash)
 	if err != nil {
 		return nil, errors.Wrap(err, "grpc client hash error", errors.CodeClientGrpcHash)
@@ -150,7 +157,6 @@ func (c *proxyClient) Hash(ctx context.Context, hash *structs.HashRequest) (*str
 }
 
 func (c *proxyClient) GenerateHMAC(ctx context.Context, hmac *structs.HMACRequest) (*structs.HMACResponse, error) {
-	hmac.EngineName = c.o.EngineName
 	generateHMAC, err := c.next().GenerateHMAC(ctx, hmac)
 	if err != nil {
 		return nil, errors.Wrap(err, "grpc client hmac error", errors.CodeClientGrpcHmac)
@@ -159,7 +165,6 @@ func (c *proxyClient) GenerateHMAC(ctx context.Context, hmac *structs.HMACReques
 }
 
 func (c *proxyClient) Sign(ctx context.Context, in *structs.SignParameters) (*structs.SignResponse, error) {
-	in.EngineName = c.o.EngineName
 	sign, err := c.next().Sign(ctx, in)
 	if err != nil {
 		return nil, errors.Wrap(err, "grpc client sign error", errors.CodeClientGrpcSign)
@@ -167,7 +172,6 @@ func (c *proxyClient) Sign(ctx context.Context, in *structs.SignParameters) (*st
 	return sign, nil
 }
 func (c *proxyClient) VerifySigned(ctx context.Context, in *structs.VerificationRequest) (*structs.VerificationResponse, error) {
-	in.EngineName = c.o.EngineName
 	signed, err := c.next().VerifySigned(ctx, in)
 	if err != nil {
 		return nil, errors.Wrap(err, "grpc client verify sign error", errors.CodeClientGrpcVerifySign)
