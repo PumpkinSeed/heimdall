@@ -54,7 +54,10 @@ func buildConnections(o Options) []grpc.ClientConnInterface {
 
 func buildDialOptions(o Options) []grpc.DialOption {
 	res := []grpc.DialOption{
-		grpc.WithUnaryInterceptor(buildInterceptor(o)),
+		grpc.WithChainUnaryInterceptor(
+				buildAuthInterceptor(o),
+				buildEngineNameInterceptor(o),
+		),
 	}
 	if o.TLS {
 		creds, err := credentials.NewClientTLSFromFile(o.CaFile, o.ServerHostOverride)
@@ -72,14 +75,17 @@ func buildDialOptions(o Options) []grpc.DialOption {
 	return res
 }
 
-func buildInterceptor(o Options) grpc.UnaryClientInterceptor {
+func buildAuthInterceptor(o Options) grpc.UnaryClientInterceptor {
 	return func(ctx context.Context, method string, req, reply interface{},
 		cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-		headers := metadata.Pairs(
-			authorizationHeader, o.APIKey,
-			engineNameHeader, getEngineName(o),
-		)
-		return invoker(metadata.NewOutgoingContext(ctx, headers), method, req, reply, cc, opts...)
+		return invoker(metadata.AppendToOutgoingContext(ctx, authorizationHeader, o.APIKey), method, req, reply, cc, opts...)
+	}
+}
+
+func buildEngineNameInterceptor(o Options) grpc.UnaryClientInterceptor {
+	return func(ctx context.Context, method string, req, reply interface{},
+		cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+		return invoker(metadata.AppendToOutgoingContext(ctx, engineNameHeader, getEngineName(o)), method, req, reply, cc, opts...)
 	}
 }
 
