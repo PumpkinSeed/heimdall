@@ -241,6 +241,8 @@ const (
 	CodePkgCryptoTransitExportInvalidVersionFormat                  Code = "32_14_6"
 	CodePkgCryptoTransitExportInvalidVersionLessThanMin             Code = "32_14_7"
 	CodePkgCryptoTransitExportVersionNotFound                       Code = "32_14_8"
+	CodePkgCryptoTransitBackup                                      Code = "32_15_"
+	CodePkgCryptoTransitBackupPolicy                                Code = "32_15_0"
 
 	CodePkgCryptoUnseal                        Code = "33"
 	CodePkgCryptoUnsealSealed                  Code = "330"
