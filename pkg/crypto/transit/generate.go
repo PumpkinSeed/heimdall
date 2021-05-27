@@ -20,7 +20,7 @@ type GenerateRequest struct {
 
 type GenerateResponse struct {
 	Ciphertext string `json:"ciphertext"`
-	KeyVersion int    `json:"key_version"`
+	KeyVersion int64    `json:"key_version"`
 	Plaintext  string `json:"plaintext"`
 }
 
@@ -86,9 +86,9 @@ func (t Transit) GenerateKey(ctx context.Context, engineName string, req Generat
 		return GenerateResponse{}, errors.New("transit generate key empty ciphertext returned", errors.CodePkgCryptoTransitGenerateCiphertext)
 	}
 
-	keyVersion := int(req.KeyVersion.Int64)
+	keyVersion := req.KeyVersion.Int64
 	if keyVersion == 0 {
-		keyVersion = p.LatestVersion
+		keyVersion = int64(p.LatestVersion)
 	}
 
 	resp := GenerateResponse{
