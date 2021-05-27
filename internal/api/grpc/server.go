@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"encoding/json"
 	"net"
 
 	"github.com/PumpkinSeed/heimdall/internal/errors"
@@ -11,6 +12,7 @@ import (
 	"github.com/PumpkinSeed/heimdall/pkg/healthcheck"
 	"github.com/PumpkinSeed/heimdall/pkg/structs"
 	"github.com/PumpkinSeed/heimdall/pkg/token"
+	"github.com/emvi/null"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -198,6 +200,121 @@ func (s server) VerifySigned(ctx context.Context, req *structs.VerificationReque
 
 func (s server) Health(ctx context.Context, req *structs.HealthRequest) (*structs.HealthResponse, error) {
 	return s.health.Check(ctx), nil
+}
+
+func (s server) Rewrap(ctx context.Context, req *structs.RewrapRequest) (*structs.CryptoResult, error) {
+	rewrap, err := s.transit.Rewrap(ctx, req.KeyName, req.EngineName, transit.BatchRequestItem{
+		Context:    req.Context,
+		Plaintext:  req.PlainText,
+		Nonce:      req.Nonce,
+		KeyVersion: int(req.KeyVersion),
+	})
+
+	if err != nil {
+		log.Errorf("Error rewrap [%s]: %v", req.KeyName, err)
+		return nil, errors.Wrap(err, "grpc rewarp error", errors.CodeApiGrpcRewarp)
+	}
+
+	return &structs.CryptoResult{
+		Result: rewrap.Ciphertext,
+	}, nil
+}
+
+func (s server) UpdateKeyConfiguration(ctx context.Context, req *structs.KeyConfig) (*structs.Empty, error) {
+	err := s.transit.UpdateKeyConfiguration(ctx, req.KeyName, req.EngineName, transit.KeyConfiguration{
+		MinDecryptionVersion: utils.NullInt64FromPtr(req.MinDecryptionVersion),
+		MinEncryptionVersion: utils.NullInt64FromPtr(req.MinEncryptionVersion),
+		DeletionAllowed:      utils.NullBoolFromPtr(req.DeletionAllowed),
+		Exportable:           utils.NullBoolFromPtr(req.Exportable),
+		AllowPlaintextBackup: utils.NullBoolFromPtr(req.AllowPlaintextBackup),
+	})
+	if err != nil {
+		log.Errorf("Error update key configuration [%s]: %v", req.KeyName, err)
+		return nil, errors.Wrap(err, "grpc update key configuration error", errors.CodeApiGrpcUpdateKeyConfig)
+	}
+
+	return &structs.Empty{}, nil
+}
+
+func (s server) RotateKey(ctx context.Context, req *structs.RotateRequest) (*structs.Empty, error) {
+	err := s.transit.Rotate(ctx, req.KeyName, req.EngineName)
+	if err != nil {
+		log.Errorf("Error rotate key [%s]: %v", req.KeyName, err)
+		return nil, errors.Wrap(err, "grpc rotate key error", errors.CodeApiGrpcRotateKey)
+	}
+
+	return &structs.Empty{}, nil
+}
+
+func (s server) ExportKey(ctx context.Context, req *structs.ExportRequest) (*structs.ExportResult, error) {
+	export, err := s.transit.Export(ctx, req.KeyName, req.EngineName, req.ExportType, req.Version)
+	if err != nil {
+		log.Errorf("Error rotate key [%s]: %v", req.KeyName, err)
+		return nil, errors.Wrap(err, "grpc export key error", errors.CodeApiGrpcExportKey)
+	}
+
+	result, err := json.Marshal(export)
+	if err != nil {
+		log.Errorf("Error marshaling exported result")
+		return nil, errors.Wrap(err, "grpc export key error", errors.CodeApiGrpcExportKey)
+	}
+
+	return &structs.ExportResult{Result: string(result)}, nil
+}
+
+func (s server) BackupKey(ctx context.Context, req *structs.BackupRequest) (*structs.BackupResult, error) {
+	backup, err := s.transit.Backup(ctx, req.KeyName, req.EngineName)
+	if err != nil {
+		log.Errorf("Error backup key [%s]: %v", req.KeyName, err)
+		return nil, errors.Wrap(err, "grpc backup key error", errors.CodeApiGrpcBackupKey)
+	}
+
+	return &structs.BackupResult{
+		Result: backup,
+	}, nil
+}
+
+func (s server) RestoreKey(ctx context.Context, req *structs.RestoreRequest) (*structs.Empty, error) {
+	err := s.transit.Restore(ctx, req.KeyName, req.EngineName, req.Backup64, req.Force)
+	if err != nil {
+		log.Errorf("Error restore key [%s]: %v", req.KeyName, err)
+		return nil, errors.Wrap(err, "grpc restore key error", errors.CodeApiGrpcRestoreKey)
+	}
+
+	return &structs.Empty{}, nil
+}
+
+func (s server) GenerateKey(ctx context.Context, req *structs.GenerateKeyRequest) (*structs.GenerateKeyResponse, error) {
+	key, err := s.transit.GenerateKey(ctx, req.EngineName, transit.GenerateRequest{
+		Name:       req.Name,
+		Plaintext:  req.Plaintext,
+		Context:    null.NewString(req.Context, true),
+		Nonce:      null.NewString(req.Nonce, true),
+		Bits:       null.NewInt64(req.Bits, true),
+		KeyVersion: null.NewInt64(req.KeyVersion, true),
+	})
+	if err != nil {
+		log.Errorf("Error generate key [%s]: %v", req.Nonce, err)
+		return nil, errors.Wrap(err, "grpc generate key error", errors.CodeApiGrpcGenerateKey)
+	}
+
+	return &structs.GenerateKeyResponse{
+		Ciphertext: key.Ciphertext,
+		KeyVersion: key.KeyVersion,
+		Plaintext:  key.Plaintext,
+	}, nil
+}
+
+func (s server) GenerateRandomBytes(ctx context.Context, req *structs.GenerateBytesRequest) (*structs.GenerateBytesResponse, error) {
+	randomBytes, err := s.transit.GenerateRandomBytes(ctx, req.UrlBytes, req.Format, int(req.BytesCount))
+	if err != nil {
+		log.Errorf("Error generate random bytes: %v", err)
+		return nil, errors.Wrap(err, "grpc generate random bytes error", errors.CodeApiGrpcGenerateRandomBytes)
+	}
+
+	return &structs.GenerateBytesResponse{
+		Result: randomBytes,
+	}, nil
 }
 
 func (s server) AuthInterceptor() grpc.UnaryServerInterceptor {

@@ -171,18 +171,19 @@ message HealthResponse {
 message RewrapRequest {
     string keyName = 1;
     string plainText = 2;
-    string nonce = 3;
-    int64 keyVersion = 4;
-    string engineName = 5;
+    string context = 3;
+    string nonce = 4;
+    int64 keyVersion = 5;
+    string engineName = 6;
 }
 
 message KeyConfig {
     string keyName = 1;
-    int64 minDecryptionVersion = 2;
-    int64 minEncryptionVersion = 3;
-    bool deletionAllowed = 4;
-    bool exportable = 5;
-    bool allowPlaintextBackup = 6;
+    optional int64 minDecryptionVersion = 2;
+    optional int64 minEncryptionVersion = 3;
+    optional bool deletionAllowed = 4;
+    optional bool exportable = 5;
+    optional bool allowPlaintextBackup = 6;
     string engineName = 7;
 }
 
