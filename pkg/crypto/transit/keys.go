@@ -84,10 +84,9 @@ func (t Transit) DeleteKey(ctx context.Context, name, engineName string) error {
 }
 
 func (t Transit) UpdateKeyConfiguration(ctx context.Context, name, engineName string, config KeyConfiguration) error {
-	// TODO add error handling
 	p, err := t.GetKey(ctx, name, engineName)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "transit update key config get key error", errors.CodePkgCryptoTransitUpdateKeyConfigGetKey)
 	}
 
 	persistNeeded := false
@@ -96,20 +95,19 @@ func (t Transit) UpdateKeyConfiguration(ctx context.Context, name, engineName st
 		minDecryptionVersion := config.MinDecryptionVersion.Int64
 
 		if minDecryptionVersion < 0 {
-			//return logical.ErrorResponse("min decryption version cannot be negative"), nil
-			return errors.New("", errors.Code(-1)) // TODO
+			return errors.New("min decryption version cannot be negative", errors.CodePkgCryptoTransitUpdateKeyConfigMinDecryptVersionNegative)
 		}
 
 		if minDecryptionVersion == 0 {
 			minDecryptionVersion = 1
-			// TODO log it ("since Vault 0.3, transit key numbering starts at 1; forcing minimum to 1")
+			logrus.Warn("since Vault 0.3, transit key numbering starts at 1; forcing minimum to 1")
 		}
 
 		if minDecryptionVersion != int64(p.MinDecryptionVersion) {
 			if minDecryptionVersion > int64(p.LatestVersion) {
-				return errors.Newf(errors.Code(-1),
+				return errors.Newf(errors.CodePkgCryptoTransitUpdateKeyConfigMinDecryptVersionLatest,
 					"cannot set min decryption version of %d, latest key version is %d",
-					minDecryptionVersion, p.LatestVersion) // TODO
+					minDecryptionVersion, p.LatestVersion)
 			}
 			p.MinDecryptionVersion = int(minDecryptionVersion)
 			persistNeeded = true
@@ -120,15 +118,14 @@ func (t Transit) UpdateKeyConfiguration(ctx context.Context, name, engineName st
 		minEncryptionVersion := config.MinEncryptionVersion.Int64
 
 		if minEncryptionVersion < 0 {
-			return errors.New("", errors.Code(-1)) // TODO
-			//return logical.ErrorResponse("min encryption version cannot be negative"), nil
+			return errors.New("min encryption version cannot be negative", errors.CodePkgCryptoTransitUpdateKeyConfigMinEncryptVersionNegative)
 		}
 
 		if minEncryptionVersion != int64(p.MinEncryptionVersion) {
 			if minEncryptionVersion > int64(p.LatestVersion) {
-				return errors.Newf(errors.Code(-1),
+				return errors.Newf(errors.CodePkgCryptoTransitUpdateKeyConfigMinEncryptVersionLatest,
 					"cannot set min encryption version of %d, latest key version is %d",
-					minEncryptionVersion, p.LatestVersion) // TODO
+					minEncryptionVersion, p.LatestVersion)
 			}
 			p.MinEncryptionVersion = int(minEncryptionVersion)
 			persistNeeded = true
@@ -139,9 +136,9 @@ func (t Transit) UpdateKeyConfiguration(ctx context.Context, name, engineName st
 	// individually. MinDecryptionVersion will always be 1 or above.
 	if p.MinEncryptionVersion > 0 &&
 		p.MinEncryptionVersion < p.MinDecryptionVersion {
-		return errors.Newf(errors.Code(-1),
+		return errors.Newf(errors.CodePkgCryptoTransitUpdateKeyConfigMinEncryptMinDecrypt,
 			"cannot set min encryption/decryption values; min encryption version of %d must be greater than or equal to min decryption version of %d",
-			p.MinEncryptionVersion, p.MinDecryptionVersion) // TODO
+			p.MinEncryptionVersion, p.MinDecryptionVersion)
 	}
 
 	if config.DeletionAllowed.Valid {
@@ -184,12 +181,15 @@ func (t Transit) UpdateKeyConfiguration(ctx context.Context, name, engineName st
 
 	switch {
 	case p.MinAvailableVersion > p.MinEncryptionVersion:
-		return errors.New("min encryption version should not be less than min available version", errors.Code(-1)) // TODO
+		return errors.New("min encryption version should not be less than min available version",
+			errors.CodePkgCryptoTransitUpdateKeyConfigMinEncryptMinAvailable)
 	case p.MinAvailableVersion > p.MinDecryptionVersion:
-		return errors.New("min decryption version should not be less then min available version", errors.Code(-1)) // TODO
+		return errors.New("min decryption version should not be less then min available version",
+			errors.CodePkgCryptoTransitUpdateKeyConfigMinDecryptMinAvailable)
 	}
 
-	return p.Persist(ctx, t.u.Storage(engineName)) // TODO
+	return errors.Wrap(p.Persist(ctx, t.u.Storage(engineName)), "error persisting key update",
+		errors.CodePkgCryptoTransitUpdateKeyConfigPersist)
 }
 
 func getKeyType(typ string) keysutil.KeyType {
