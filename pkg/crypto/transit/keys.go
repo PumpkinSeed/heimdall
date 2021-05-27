@@ -188,8 +188,12 @@ func (t Transit) UpdateKeyConfiguration(ctx context.Context, name, engineName st
 			errors.CodePkgCryptoTransitUpdateKeyConfigMinDecryptMinAvailable)
 	}
 
-	return errors.Wrap(p.Persist(ctx, t.u.Storage(engineName)), "error persisting key update",
-		errors.CodePkgCryptoTransitUpdateKeyConfigPersist)
+	if err := p.Persist(ctx, t.u.Storage(engineName)); err != nil {
+		return errors.Wrap(err, "error persisting key update",
+			errors.CodePkgCryptoTransitUpdateKeyConfigPersist)
+	}
+
+	return nil
 }
 
 func getKeyType(typ string) keysutil.KeyType {

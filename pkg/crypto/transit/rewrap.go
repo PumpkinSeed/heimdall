@@ -10,20 +10,20 @@ import (
 func (t Transit) Rewrap(ctx context.Context, key, engineName string, req BatchRequestItem) (EncryptBatchResponseItem, error) {
 	p, err := t.GetKey(ctx, key, engineName)
 	if err != nil {
-		return EncryptBatchResponseItem{}, errors.Wrap(err, "transit encrypt get key error", errors.CodePkgCryptoTransitRewrapGetKey)
+		return EncryptBatchResponseItem{}, errors.Wrap(err, "transit rewrap get key error", errors.CodePkgCryptoTransitRewrapGetKey)
 	}
 	if p == nil {
-		return EncryptBatchResponseItem{}, errors.Newf(errors.CodePkgCryptoTransitRewrapPolicyNotFound, "transit encrypt missing policy for key %s", key)
+		return EncryptBatchResponseItem{}, errors.Newf(errors.CodePkgCryptoTransitRewrapPolicyNotFound, "transit rewrap missing policy for key %s", key)
 	}
 
 	if _, err := base64.StdEncoding.DecodeString(req.Plaintext); err != nil {
-		return EncryptBatchResponseItem{}, errors.Wrap(err, "transit encrypt plain text not base64", errors.CodePkgCryptoTransitRewrapPlainTextFormat)
+		return EncryptBatchResponseItem{}, errors.Wrap(err, "transit rewrap plain text not base64", errors.CodePkgCryptoTransitRewrapPlainTextFormat)
 	}
 
 	if len(req.Context) != 0 {
 		req.DecodedContext, err = base64.StdEncoding.DecodeString(req.Context)
 		if err != nil {
-			return EncryptBatchResponseItem{}, errors.Wrap(err, "transit encrypt context not base64", errors.CodePkgCryptoTransitRewrapContextFormat)
+			return EncryptBatchResponseItem{}, errors.Wrap(err, "transit rewrap context not base64", errors.CodePkgCryptoTransitRewrapContextFormat)
 		}
 	}
 
@@ -31,18 +31,18 @@ func (t Transit) Rewrap(ctx context.Context, key, engineName string, req BatchRe
 		var err error
 		req.DecodedNonce, err = base64.StdEncoding.DecodeString(req.Nonce)
 		if err != nil {
-			return EncryptBatchResponseItem{}, errors.Wrap(err, "transit encrypt nonce not base64", errors.CodePkgCryptoTransitRewrapNonceFormat)
+			return EncryptBatchResponseItem{}, errors.Wrap(err, "transit rewrap nonce not base64", errors.CodePkgCryptoTransitRewrapNonceFormat)
 		}
 	}
 
 	plaintext, err := p.Decrypt(req.DecodedContext, req.DecodedNonce, req.Ciphertext)
 	if err != nil {
-		return EncryptBatchResponseItem{}, errors.Wrap(err, "transit encrypt policy encrypt error", errors.CodePkgCryptoTransitRewrapDecrypt)
+		return EncryptBatchResponseItem{}, errors.Wrap(err, "transit rewrap policy encrypt error", errors.CodePkgCryptoTransitRewrapDecrypt)
 	}
 
 	ciphertext, err := p.Encrypt(req.KeyVersion, req.DecodedContext, req.DecodedNonce, plaintext)
 	if err != nil {
-		return EncryptBatchResponseItem{}, errors.Wrap(err, "transit encrypt policy encrypt error", errors.CodePkgCryptoTransitRewrapEncrypt)
+		return EncryptBatchResponseItem{}, errors.Wrap(err, "transit rewrap policy encrypt error", errors.CodePkgCryptoTransitRewrapEncrypt)
 	}
 
 	if ciphertext == "" {
