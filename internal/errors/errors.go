@@ -256,6 +256,12 @@ const (
 	CodePkgCryptoTransitGenerateRandRead                            Code = "32_17_5"
 	CodePkgCryptoTransitGenerateEncrypt                             Code = "32_17_6"
 	CodePkgCryptoTransitGenerateCiphertext                          Code = "32_17_7"
+	CodePkgCryptoTransitGenerateRandomBytes                         Code = "32_18_"
+	CodePkgCryptoTransitGenerateRandomBytesUrlBytes                 Code = "32_18_0"
+	CodePkgCryptoTransitGenerateRandomBytesParse                    Code = "32_18_1"
+	CodePkgCryptoTransitGenerateRandomBytesMax                      Code = "32_18_2"
+	CodePkgCryptoTransitGenerateRandomBytesFormat                   Code = "32_18_3"
+	CodePkgCryptoTransitGenerateRandomBytesRandomGenerate           Code = "32_18_4"
 
 	CodePkgCryptoUnseal                        Code = "33"
 	CodePkgCryptoUnsealSealed                  Code = "330"

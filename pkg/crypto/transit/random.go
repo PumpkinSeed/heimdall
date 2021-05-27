@@ -18,7 +18,7 @@ func (t Transit) GenerateRandomBytes(ctx context.Context, urlBytes, format strin
 	if urlBytes != "" {
 		bytes, err = strconv.Atoi(urlBytes)
 		if err != nil {
-			return "", errors.Wrap(err, "error parsing url-set byte count", errors.Code(-1)) // TODO
+			return "", errors.Wrap(err, "error parsing url-set byte count", errors.CodePkgCryptoTransitGenerateRandomBytesUrlBytes)
 		}
 	} else {
 		if bytesCount == 0 {
@@ -29,23 +29,25 @@ func (t Transit) GenerateRandomBytes(ctx context.Context, urlBytes, format strin
 	}
 
 	if bytes < 1 {
-		return "", errors.New(`"bytes" cannot be less than 1`, errors.Code(-1)) // TODO
+		return "", errors.New(`"bytes" cannot be less than 1`, errors.CodePkgCryptoTransitGenerateRandomBytesParse)
 	}
 
 	if bytes > maxBytes {
-		return "", errors.Newf(errors.Code(-1), `"bytes" should be less than %d`, maxBytes)
+		return "", errors.Newf(errors.CodePkgCryptoTransitGenerateRandomBytesMax, `"bytes" should be less than %d`, maxBytes)
 	}
 
 	switch format {
 	case "hex":
 	case "base64":
 	default:
-		return "", errors.Newf(errors.Code(-1), "unsupported encoding format %q; must be \"hex\" or \"base64\"", format)
+		return "", errors.Newf(errors.CodePkgCryptoTransitGenerateRandomBytesFormat,
+			"unsupported encoding format %q; must be \"hex\" or \"base64\"", format)
 	}
 
 	randBytes, err := uuid.GenerateRandomBytes(bytes)
 	if err != nil {
-		return "", err // TODO
+		return "", errors.Wrap(err, "transit generate random bytes random generation error",
+			errors.CodePkgCryptoTransitGenerateRandomBytesRandomGenerate)
 	}
 
 	var retStr string
