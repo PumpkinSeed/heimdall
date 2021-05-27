@@ -222,6 +222,9 @@ const (
 	CodePkgCryptoTransitRewrapDecrypt                            Code = "32_12_5"
 	CodePkgCryptoTransitRewrapEncrypt                            Code = "32_12_6"
 	CodePkgCryptoTransitRewrapResultFormat                       Code = "32_12_7"
+	CodePkgCryptoTransitRotate                                   Code = "32_13_"
+	CodePkgCryptoTransitRotateGetKey                             Code = "32_13_0"
+	CodePkgCryptoTransitRotateRotate                             Code = "32_13_1"
 
 	CodePkgCryptoUnseal                        Code = "33"
 	CodePkgCryptoUnsealSealed                  Code = "330"
