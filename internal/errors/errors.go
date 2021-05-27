@@ -243,6 +243,10 @@ const (
 	CodePkgCryptoTransitExportVersionNotFound                       Code = "32_14_8"
 	CodePkgCryptoTransitBackup                                      Code = "32_15_"
 	CodePkgCryptoTransitBackupPolicy                                Code = "32_15_0"
+	CodePkgCryptoTransitRestore                                     Code = "32_16_"
+	CodePkgCryptoTransitRestoreMissingBackupParam                   Code = "32_16_0"
+	CodePkgCryptoTransitRestoreInvalidKeyName                       Code = "32_16_1"
+	CodePkgCryptoTransitRestorePolicy                               Code = "32_16_2"
 
 	CodePkgCryptoUnseal                        Code = "33"
 	CodePkgCryptoUnsealSealed                  Code = "330"
