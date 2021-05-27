@@ -31,7 +31,7 @@ func (t Transit) GenerateKey(ctx context.Context, engineName string, req Generat
 		plaintextAllowed = true
 	case "wrapped":
 	default:
-		return GenerateResponse{}, errors.New("Invalid path, must be 'plaintext' or 'wrapped'", errors.Code(-1)) // TODO
+		return GenerateResponse{}, errors.New("Invalid path, must be 'plaintext' or 'wrapped'", errors.CodePkgCryptoTransitGenerateInvalidPlainText)
 	}
 
 	var err error
@@ -41,7 +41,7 @@ func (t Transit) GenerateKey(ctx context.Context, engineName string, req Generat
 	if req.Context.Valid && len(req.Context.String) != 0 {
 		decodedContext, err = base64.StdEncoding.DecodeString(req.Context.String)
 		if err != nil {
-			return GenerateResponse{}, errors.Wrap(err, "failed to base64-decode context", errors.Code(-1)) // TODO
+			return GenerateResponse{}, errors.Wrap(err, "failed to base64-decode context", errors.CodePkgCryptoTransitGenerateInvalidContext)
 		}
 	}
 
@@ -50,13 +50,13 @@ func (t Transit) GenerateKey(ctx context.Context, engineName string, req Generat
 	if req.Nonce.Valid && len(req.Nonce.String) != 0 {
 		decodedNonce, err = base64.StdEncoding.DecodeString(req.Nonce.String)
 		if err != nil {
-			return GenerateResponse{}, errors.Wrap(err, "failed to base64-decode nonce", errors.Code(-1)) // TODO
+			return GenerateResponse{}, errors.Wrap(err, "failed to base64-decode nonce", errors.CodePkgCryptoTransitGenerateInvalidNonce)
 		}
 	}
 
 	p, err := t.GetKey(ctx, req.Name, engineName)
 	if err != nil {
-		return GenerateResponse{}, errors.Wrap(err, "encryption key not found", errors.Code(-1)) // TODO
+		return GenerateResponse{}, errors.Wrap(err, "encryption key not found", errors.CodePkgCryptoTransitGenerateGetKey)
 	}
 
 	if !req.Bits.Valid {
@@ -70,20 +70,20 @@ func (t Transit) GenerateKey(ctx context.Context, engineName string, req Generat
 	case 128:
 		newKey = make([]byte, 16)
 	default:
-		return GenerateResponse{}, errors.New("invalid bit length", errors.Code(-1)) // TODO
+		return GenerateResponse{}, errors.New("invalid bit length", errors.CodePkgCryptoTransitGenerateInvalidBits)
 	}
 	_, err = rand.Read(newKey)
 	if err != nil {
-		return GenerateResponse{}, err // TODO
+		return GenerateResponse{}, errors.Wrap(err, "transit generate key error", errors.CodePkgCryptoTransitGenerateRandRead)
 	}
 
 	ciphertext, err := p.Encrypt(int(req.KeyVersion.Int64), decodedContext, decodedNonce, base64.StdEncoding.EncodeToString(newKey))
 	if err != nil {
-		return GenerateResponse{}, errors.Wrap(err, "", errors.Code(-1)) // TODO
+		return GenerateResponse{}, errors.Wrap(err, "transit generate key encrypt error", errors.CodePkgCryptoTransitGenerateEncrypt)
 	}
 
 	if ciphertext == "" {
-		return GenerateResponse{}, errors.New("empty ciphertext returned", errors.Code(-1)) // TODO
+		return GenerateResponse{}, errors.New("transit generate key empty ciphertext returned", errors.CodePkgCryptoTransitGenerateCiphertext)
 	}
 
 	keyVersion := int(req.KeyVersion.Int64)
