@@ -8,7 +8,6 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -28,26 +27,26 @@ func (t Transit) Export(ctx context.Context, keyName, engineName, exportType, ve
 	case ExportTypeSigningKey:
 	case ExportTypeHMACKey:
 	default:
-		return nil, errors.Newf(errors.Code(-1), "invalid export type: %s", exportType) // TODO
+		return nil, errors.Newf(errors.CodePkgCryptoTransitExportType, "invalid export type: [%s]", exportType)
 	}
 
 	p, err := t.GetKey(ctx, keyName, engineName)
 	if err != nil {
-		return nil, err // TODO
+		return nil, errors.Wrap(err, "transit export get key error", errors.CodePkgCryptoTransitExportGetKey)
 	}
 
 	if !p.Exportable {
-		return nil, errors.New("key is not exportable", errors.Code(-1)) // TODO
+		return nil, errors.New("key is not exportable", errors.CodePkgCryptoTransitExportNonExportable)
 	}
 
 	switch exportType {
 	case ExportTypeEncryptionKey:
 		if !p.Type.EncryptionSupported() {
-			return nil, errors.New("encryption not supported for the key", errors.Code(-1)) // TODO
+			return nil, errors.New("encryption not supported for the key", errors.CodePkgCryptoTransitExportTypeEncryptKeyNotSupported)
 		}
 	case ExportTypeSigningKey:
 		if !p.Type.SigningSupported() {
-			return nil, errors.New("signing not supported for the key", errors.Code(-1)) // TODO
+			return nil, errors.New("signing not supported for the key", errors.CodePkgCryptoTransitExportTypeSigningKeyNotSupported)
 		}
 	}
 
@@ -57,7 +56,7 @@ func (t Transit) Export(ctx context.Context, keyName, engineName, exportType, ve
 		for k, v := range p.Keys {
 			exportKey, err := getExportKey(p, &v, exportType)
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrap(err, "get export key error", errors.CodePkgCryptoTransitExportGetExportKey)
 			}
 			retKeys[k] = exportKey
 		}
@@ -70,21 +69,21 @@ func (t Transit) Export(ctx context.Context, keyName, engineName, exportType, ve
 			version = strings.TrimPrefix(version, "v")
 			versionValue, err = strconv.Atoi(version)
 			if err != nil {
-				return nil, errors.New("invalid key version", errors.Code(-1)) // TODO
+				return nil, errors.Newf(errors.CodePkgCryptoTransitExportInvalidVersionFormat, "invalid key version [%s]", version)
 			}
 		}
 
 		if versionValue < p.MinDecryptionVersion {
-			return nil, errors.New("version for export is below minimum decryption version", errors.Code(-1)) // TODO
+			return nil, errors.New("version for export is below minimum decryption version", errors.CodePkgCryptoTransitExportInvalidVersionLessThanMin)
 		}
 		key, ok := p.Keys[strconv.Itoa(versionValue)]
 		if !ok {
-			return nil, errors.New("version does not exist or cannot be found", errors.Code(-1)) // TODO
+			return nil, errors.New("version does not exist or cannot be found", errors.CodePkgCryptoTransitExportVersionNotFound)
 		}
 
 		exportKey, err := getExportKey(p, &key, exportType)
 		if err != nil {
-			return nil, err // TODO
+			return nil, errors.Wrap(err, "get export key error for specified version", errors.CodePkgCryptoTransitExportGetExportKey)
 		}
 
 		retKeys[strconv.Itoa(versionValue)] = exportKey
@@ -95,7 +94,7 @@ func (t Transit) Export(ctx context.Context, keyName, engineName, exportType, ve
 
 func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType string) (string, error) {
 	if policy == nil {
-		return "", errors.New("nil policy provided", errors.Code(-1)) // TODO
+		return "", errors.New("nil policy provided", errors.CodePkgCryptoTransitExportGetExportKeyPolicyMissing)
 	}
 
 	switch exportType {
@@ -125,7 +124,7 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 			}
 			ecKey, err := keyEntryToECPrivateKey(key, curve)
 			if err != nil {
-				return "", err // TODO
+				return "", errors.Wrap(err, "key entry to EC private key error", errors.CodePkgCryptoTransitExportGetExportKeyToPrivateKey)
 			}
 			return ecKey, nil
 
@@ -137,7 +136,7 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 		}
 	}
 
-	return "", fmt.Errorf("unknown key type %v", policy.Type) // TODO
+	return "", errors.Newf(errors.CodePkgCryptoTransitExportGetExportKeyUnknownType, "unknown key type [%v]", policy.Type)
 }
 
 func encodeRSAPrivateKey(key *rsa.PrivateKey) string {
@@ -154,7 +153,7 @@ func encodeRSAPrivateKey(key *rsa.PrivateKey) string {
 
 func keyEntryToECPrivateKey(k *keysutil.KeyEntry, curve elliptic.Curve) (string, error) {
 	if k == nil {
-		return "", errors.New("nil KeyEntry provided", errors.Code(-1)) // TODO
+		return "", errors.New("nil KeyEntry provided", errors.CodePkgCryptoTransitExportGetExportKeyToPrivateKeyMissingEntry)
 	}
 
 	privKey := &ecdsa.PrivateKey{
@@ -167,10 +166,10 @@ func keyEntryToECPrivateKey(k *keysutil.KeyEntry, curve elliptic.Curve) (string,
 	}
 	ecder, err := x509.MarshalECPrivateKey(privKey)
 	if err != nil {
-		return "", err // TODO
+		return "", errors.Wrap(err, "keyEntryToECPrivateKey x509 Marshal EC error", errors.CodePkgCryptoTransitExportGetExportKeyToPrivateKeyMarshal)
 	}
 	if ecder == nil {
-		return "", errors.New("no data returned when marshalling to private key", errors.Code(-1)) // TODO
+		return "", errors.New("no data returned when marshalling to private key", errors.CodePkgCryptoTransitExportGetExportKeyToPrivateKeyMarshalResult)
 	}
 
 	block := pem.Block{
