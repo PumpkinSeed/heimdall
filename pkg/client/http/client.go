@@ -16,7 +16,10 @@ import (
 	"google.golang.org/grpc"
 )
 
-const defaultEnginePath = "transit/"
+const (
+	defaultEnginePath = "transit/"
+	engineNameKey     = "engineName"
+)
 
 type Options struct {
 	*api.Config
@@ -155,6 +158,86 @@ func (c *proxyClient) VerifySigned(ctx context.Context, req *structs.Verificatio
 		return nil, errors.Wrap(err, "http client verify sign error", errors.CodeClientHttpVerifySign)
 	}
 	return signed, nil
+}
+
+func (c *proxyClient) Rewrap(ctx context.Context, req *structs.RewrapRequest) (*structs.CryptoResult, error) {
+	req.EngineName = c.o.EngineName
+	out, err := c.next().Rewrap(ctx, req)
+	if err != nil {
+		return nil, errors.Wrap(err, "http client rewrap error", errors.CodeClientHttpRewrap)
+	}
+	return out, nil
+}
+
+func (c *proxyClient) UpdateKeyConfiguration(ctx context.Context, req *structs.KeyConfig) (*structs.Empty, error) {
+	req.EngineName = c.o.EngineName
+	out, err := c.next().UpdateKeyConfiguration(ctx, req)
+	if err != nil {
+		return nil, errors.Wrap(err, "http client update key config error", errors.CodeClientHttpUpdateKeyConfig)
+	}
+	return out, nil
+}
+
+func (c *proxyClient) RotateKey(ctx context.Context, req *structs.RotateRequest) (*structs.Empty, error) {
+	req.EngineName = c.o.EngineName
+	out, err := c.next().RotateKey(ctx, req)
+	if err != nil {
+		return nil, errors.Wrap(err, "http client rotate error", errors.CodeClientHttpRotateKey)
+	}
+	return out, nil
+}
+
+func (c *proxyClient) ExportKey(ctx context.Context, req *structs.ExportRequest) (*structs.ExportResult, error) {
+	req.EngineName = c.o.EngineName
+	out, err := c.next().ExportKey(ctx, req)
+	if err != nil {
+		return nil, errors.Wrap(err, "http client export error", errors.CodeClientHttpExport)
+	}
+	return out, nil
+}
+
+func (c *proxyClient) BackupKey(ctx context.Context, req *structs.BackupRequest) (*structs.BackupResult, error) {
+	req.EngineName = c.o.EngineName
+	out, err := c.next().BackupKey(ctx, req)
+	if err != nil {
+		return nil, errors.Wrap(err, "http client backup error", errors.CodeClientHttpBackup)
+	}
+	return out, nil
+}
+
+func (c *proxyClient) RestoreKey(ctx context.Context, req *structs.RestoreRequest) (*structs.Empty, error) {
+	req.EngineName = c.o.EngineName
+	out, err := c.next().RestoreKey(ctx, req)
+	if err != nil {
+		return nil, errors.Wrap(err, "http client restore error", errors.CodeClientHttpRestore)
+	}
+	return out, nil
+}
+
+func (c *proxyClient) GenerateKey(ctx context.Context, req *structs.GenerateKeyRequest) (*structs.GenerateKeyResponse, error) {
+	req.EngineName = c.o.EngineName
+	out, err := c.next().GenerateKey(ctx, req)
+	if err != nil {
+		return nil, errors.Wrap(err, "http client generate key error", errors.CodeClientHttpGenerate)
+	}
+	return out, nil
+}
+
+func (c *proxyClient) GenerateRandomBytes(ctx context.Context, req *structs.GenerateBytesRequest) (*structs.GenerateBytesResponse, error) {
+	out, err := c.next().GenerateRandomBytes(context.WithValue(ctx, engineNameKey, c.o.EngineName), req)
+	if err != nil {
+		return nil, errors.Wrap(err, "http client generate random bytes error", errors.CodeClientHttpGenerateRandomBytes)
+	}
+	return out, nil
+}
+
+func (c *proxyClient) Health(ctx context.Context, in *structs.HealthRequest) (*structs.HealthResponse, error) {
+	for _, cl := range c.cs {
+		if cl.Address() == in.Address {
+			return cl.Health(ctx, in)
+		}
+	}
+	return nil, errors.New("invalid address", errors.CodeClientHttp)
 }
 
 // wrapper for vault client, implements the EncryptionClient interface
@@ -465,11 +548,201 @@ func (h httpClient) VerifySigned(ctx context.Context, in *structs.VerificationRe
 	return nil, err
 }
 
-func (c *proxyClient) Health(ctx context.Context, in *structs.HealthRequest) (*structs.HealthResponse, error) {
-	for _, cl := range c.cs {
-		if cl.Address() == in.Address {
-			return cl.Health(ctx, in)
-		}
+func (h httpClient) Rewrap(ctx context.Context, in *structs.RewrapRequest, opts ...grpc.CallOption) (*structs.CryptoResult, error) {
+	if in.EngineName == "" {
+		in.EngineName = defaultEnginePath
 	}
-	return nil, errors.New("invalid address", errors.CodeClientHttp)
+	r := h.NewRequest(http.MethodPost, fmt.Sprintf("/%s/rewrap/%s", in.EngineName, in.KeyName))
+	if err := r.SetJSONBody(in); err != nil {
+		return nil, err
+	}
+	resp, err := h.RawRequestWithContext(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusOK {
+		res, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		var keyResp structs.CryptoResult
+		if err := json.Unmarshal(res, &keyResp); err != nil {
+			return nil, err
+		}
+		return &keyResp, nil
+	}
+	return nil, err
+}
+
+func (h httpClient) UpdateKeyConfiguration(ctx context.Context, in *structs.KeyConfig, opts ...grpc.CallOption) (*structs.Empty, error) {
+	if in.EngineName == "" {
+		in.EngineName = defaultEnginePath
+	}
+	r := h.NewRequest(http.MethodPost, fmt.Sprintf("/%s/keys/%s/config", in.EngineName, in.KeyName))
+	if err := r.SetJSONBody(in); err != nil {
+		return nil, err
+	}
+	resp, err := h.RawRequestWithContext(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusOK {
+		return &structs.Empty{}, nil
+	}
+	return nil, err
+}
+
+func (h httpClient) RotateKey(ctx context.Context, in *structs.RotateRequest, opts ...grpc.CallOption) (*structs.Empty, error) {
+	if in.EngineName == "" {
+		in.EngineName = defaultEnginePath
+	}
+	r := h.NewRequest(http.MethodPost, fmt.Sprintf("/%s/keys/%s/rotate", in.EngineName, in.KeyName))
+	if err := r.SetJSONBody(in); err != nil {
+		return nil, err
+	}
+	resp, err := h.RawRequestWithContext(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusOK {
+		return &structs.Empty{}, nil
+	}
+	return nil, err
+}
+
+func (h httpClient) ExportKey(ctx context.Context, in *structs.ExportRequest, opts ...grpc.CallOption) (*structs.ExportResult, error) {
+	if in.EngineName == "" {
+		in.EngineName = defaultEnginePath
+	}
+	r := h.NewRequest(http.MethodGet, fmt.Sprintf("/%s/export/%s/%s/%s", in.EngineName, in.ExportType, in.KeyName, in.Version))
+	resp, err := h.RawRequestWithContext(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusOK {
+		res, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		var keyResp structs.ExportResult
+		if err := json.Unmarshal(res, &keyResp); err != nil {
+			return nil, err
+		}
+
+		return &keyResp, nil
+	}
+	return nil, err
+}
+
+func (h httpClient) BackupKey(ctx context.Context, in *structs.BackupRequest, opts ...grpc.CallOption) (*structs.BackupResult, error) {
+	if in.EngineName == "" {
+		in.EngineName = defaultEnginePath
+	}
+	r := h.NewRequest(http.MethodGet, fmt.Sprintf("/%s/backup/%s", in.EngineName, in.KeyName))
+	resp, err := h.RawRequestWithContext(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusOK {
+		res, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		var keyResp structs.BackupResult
+		if err := json.Unmarshal(res, &keyResp); err != nil {
+			return nil, err
+		}
+
+		return &keyResp, nil
+	}
+	return nil, err
+}
+
+func (h httpClient) RestoreKey(ctx context.Context, in *structs.RestoreRequest, opts ...grpc.CallOption) (*structs.Empty, error) {
+	if in.EngineName == "" {
+		in.EngineName = defaultEnginePath
+	}
+	r := h.NewRequest(http.MethodPost, fmt.Sprintf("/%s/restore/%s", in.EngineName, in.KeyName))
+	if err := r.SetJSONBody(in); err != nil {
+		return nil, err
+	}
+	resp, err := h.RawRequestWithContext(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusOK {
+		return &structs.Empty{}, nil
+	}
+	return nil, err
+}
+
+func (h httpClient) GenerateKey(ctx context.Context, in *structs.GenerateKeyRequest, opts ...grpc.CallOption) (*structs.GenerateKeyResponse, error) {
+	if in.EngineName == "" {
+		in.EngineName = defaultEnginePath
+	}
+	r := h.NewRequest(http.MethodPost, fmt.Sprintf("/%s/datakey/%s/%s", in.EngineName, in.Plaintext, in.Name))
+	if err := r.SetJSONBody(in); err != nil {
+		return nil, err
+	}
+	resp, err := h.RawRequestWithContext(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusOK {
+		res, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		var keyResp structs.GenerateKeyResponse
+		if err := json.Unmarshal(res, &keyResp); err != nil {
+			return nil, err
+		}
+
+		return &keyResp, nil
+	}
+	return nil, err
+}
+
+func (h httpClient) GenerateRandomBytes(ctx context.Context, in *structs.GenerateBytesRequest, opts ...grpc.CallOption) (*structs.GenerateBytesResponse, error) {
+	engineName := ctx.Value(engineNameKey)
+	if engineName == "" {
+		engineName = defaultEnginePath
+	}
+	r := h.NewRequest(http.MethodPost, fmt.Sprintf("/%s/random/%d", engineName, in.BytesCount))
+	if err := r.SetJSONBody(in); err != nil {
+		return nil, err
+	}
+	resp, err := h.RawRequestWithContext(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusOK {
+		res, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		var keyResp structs.GenerateBytesResponse
+		if err := json.Unmarshal(res, &keyResp); err != nil {
+			return nil, err
+		}
+
+		return &keyResp, nil
+	}
+	return nil, err
 }
