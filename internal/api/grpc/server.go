@@ -54,7 +54,8 @@ func newServer(u *unseal.Unseal) server {
 }
 
 func (s server) CreateKey(ctx context.Context, key *structs.Key) (*structs.KeyResponse, error) {
-	err := s.transit.CreateKey(ctx, key.Name, key.Type.String(), key.EngineName)
+	engineName := getEngineName(ctx)
+	err := s.transit.CreateKey(ctx, key.Name, key.Type.String(), engineName)
 	if err != nil {
 		log.Errorf("Error with key creation [%s|%s]: %v", key.Name, key.Type, err)
 		return nil, errors.Wrap(err, "grpc create key error", errors.CodeApiGrpcCreateKey)
@@ -68,7 +69,8 @@ func (s server) CreateKey(ctx context.Context, key *structs.Key) (*structs.KeyRe
 }
 
 func (s server) ReadKey(ctx context.Context, key *structs.KeyName) (*structs.KeyResponse, error) {
-	k, err := s.transit.GetKey(ctx, key.Name, key.EngineName)
+	engineName := getEngineName(ctx)
+	k, err := s.transit.GetKey(ctx, key.Name, engineName)
 	if err != nil {
 		log.Errorf("Error with key reading [%s]: %v", key.Name, err)
 		return nil, errors.Wrap(err, "grpc read key error", errors.CodeApiGrpcReadKey)
@@ -85,7 +87,8 @@ func (s server) ReadKey(ctx context.Context, key *structs.KeyName) (*structs.Key
 }
 
 func (s server) DeleteKey(ctx context.Context, key *structs.KeyName) (*structs.KeyResponse, error) {
-	err := s.transit.DeleteKey(ctx, key.Name, key.EngineName)
+	engineName := getEngineName(ctx)
+	err := s.transit.DeleteKey(ctx, key.Name, engineName)
 	if err != nil {
 		log.Errorf("Error with key deletion [%s]: %v", key.Name, err)
 		return nil, errors.Wrap(err, "grpc delete key error", errors.CodeApiGrpcDeleteKey)
@@ -101,7 +104,8 @@ func (s server) DeleteKey(ctx context.Context, key *structs.KeyName) (*structs.K
 }
 
 func (s server) ListKeys(ctx context.Context, in *structs.Empty) (*structs.KeyListResponse, error) {
-	keys, err := s.transit.ListKeys(ctx, in.EngineName)
+	engineName := getEngineName(ctx)
+	keys, err := s.transit.ListKeys(ctx, engineName)
 	if err != nil {
 		log.Errorf("Error getting keys: %v", err)
 		return nil, errors.Wrap(err, "grpc list key error", errors.CodeApiGrpcListKey)
@@ -123,7 +127,8 @@ func (s server) ListKeys(ctx context.Context, in *structs.Empty) (*structs.KeyLi
 }
 
 func (s server) Encrypt(ctx context.Context, req *structs.EncryptRequest) (*structs.CryptoResult, error) {
-	e, err := s.transit.Encrypt(ctx, req.KeyName, req.EngineName, transit.BatchRequestItem{
+	engineName := getEngineName(ctx)
+	e, err := s.transit.Encrypt(ctx, req.KeyName, engineName, transit.BatchRequestItem{
 		Plaintext:  req.PlainText,
 		Nonce:      req.Nonce,
 		KeyVersion: int(req.KeyVersion),
@@ -139,7 +144,8 @@ func (s server) Encrypt(ctx context.Context, req *structs.EncryptRequest) (*stru
 }
 
 func (s server) Decrypt(ctx context.Context, req *structs.DecryptRequest) (*structs.CryptoResult, error) {
-	d, err := s.transit.Decrypt(ctx, req.KeyName, req.EngineName, transit.BatchRequestItem{
+	engineName := getEngineName(ctx)
+	d, err := s.transit.Decrypt(ctx, req.KeyName, engineName, transit.BatchRequestItem{
 		Ciphertext: req.Ciphertext,
 		Nonce:      req.Nonce,
 		KeyVersion: int(req.KeyVersion),
@@ -167,7 +173,8 @@ func (s server) Hash(ctx context.Context, req *structs.HashRequest) (*structs.Ha
 }
 
 func (s server) GenerateHMAC(ctx context.Context, req *structs.HMACRequest) (*structs.HMACResponse, error) {
-	hmac, err := s.transit.HMAC(ctx, req.KeyName, req.Input, req.Algorithm, int(req.KeyVersion), req.EngineName)
+	engineName := getEngineName(ctx)
+	hmac, err := s.transit.HMAC(ctx, req.KeyName, req.Input, req.Algorithm, int(req.KeyVersion), engineName)
 	if err != nil {
 		log.Errorf("Error HMAC generating: %v", err)
 		return nil, errors.Wrap(err, "grpc HMAC error", errors.CodeApiGrpcHMAC)
@@ -179,7 +186,8 @@ func (s server) GenerateHMAC(ctx context.Context, req *structs.HMACRequest) (*st
 }
 
 func (s server) Sign(ctx context.Context, req *structs.SignParameters) (*structs.SignResponse, error) {
-	signature, err := s.transit.Sign(ctx, req)
+	engineName := getEngineName(ctx)
+	signature, err := s.transit.Sign(ctx, req, engineName)
 	if err != nil {
 		log.Errorf("Error generating sign: %v", err)
 		return nil, errors.Wrap(err, "grpc sign error", errors.CodeApiGrpcSign)
@@ -188,7 +196,8 @@ func (s server) Sign(ctx context.Context, req *structs.SignParameters) (*structs
 }
 
 func (s server) VerifySigned(ctx context.Context, req *structs.VerificationRequest) (*structs.VerificationResponse, error) {
-	verificationResult, err := s.transit.VerifySign(ctx, req)
+	engineName := getEngineName(ctx)
+	verificationResult, err := s.transit.VerifySign(ctx, req, engineName)
 	if err != nil {
 		log.Errorf("Error validating signature %v", err)
 		return nil, errors.Wrap(err, "grpc verify sign error", errors.CodeApiGrpcVerifySign)
@@ -221,3 +230,16 @@ func (s server) AuthInterceptor() grpc.UnaryServerInterceptor {
 		return handler(ctx, req)
 	}
 }
+
+func getEngineName(ctx context.Context) string {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return ""
+	}
+	en := md.Get("EngineName")
+	if len(en) > 0 {
+		return en[0]
+	}
+	return ""
+}
+

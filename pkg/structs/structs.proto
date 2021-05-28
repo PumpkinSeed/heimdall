@@ -21,18 +21,15 @@ service Encryption {
 }
 
 message Empty {
-    string engineName = 1;
 }
 
 message KeyName {
     string name = 1;
-    string engineName = 2;
 }
 
 message Key {
     string name = 1;
     EncryptionType type = 2;
-    string engineName = 3;
 }
 
 message KeyResponse {
@@ -80,7 +77,6 @@ message EncryptRequest {
     string plainText = 2;
     string nonce = 3;
     int64 keyVersion = 4;
-    string engineName = 5;
 }
 
 message DecryptRequest {
@@ -88,7 +84,6 @@ message DecryptRequest {
     string ciphertext = 2;
     string nonce = 3;
     int64 keyVersion = 4;
-    string engineName = 5;
 }
 
 message CryptoResult {
@@ -99,7 +94,6 @@ message HashRequest {
     HashType algorithm = 1;
     string input = 2;
     string format = 3;
-    string engineName = 4;
 }
 
 message HashResponse {
@@ -111,7 +105,6 @@ message HMACRequest {
     int64 keyVersion = 2;
     string algorithm = 3;
     string input = 4;
-    string engineName = 5;
 }
 
 message HMACResponse {
@@ -126,7 +119,6 @@ message SignParameters {
     string context = 5;
     bool prehashed = 6;
     string signatureAlgorithm = 7;
-    string engineName = 8;
 }
 
 message SignResponse {
@@ -143,7 +135,6 @@ message VerificationRequest {
     string context = 6;
     bool prehashed = 7;
     string signatureAlgorithm = 8;
-    string engineName = 9;
 }
 
 message VerificationResponse {

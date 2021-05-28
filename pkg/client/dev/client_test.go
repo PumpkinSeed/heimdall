@@ -20,11 +20,9 @@ func TestOverAll(t *testing.T) {
 	ctx := context.Background()
 
 	keyName := "test_key_" + xid.New().String()
-	const engineName = ""
 
 	key, err := client.CreateKey(ctx, &structs.Key{
-		Name:       keyName,
-		EngineName: engineName,
+		Name: keyName,
 	})
 	assert.NoError(t, err)
 	assert.Equal(t, keyName, key.Key.Name, "create key")
@@ -44,7 +42,6 @@ func TestOverAll(t *testing.T) {
 		KeyName:    keyName,
 		PlainText:  plainText,
 		KeyVersion: 0,
-		EngineName: engineName,
 	})
 	assert.NoError(t, err)
 	assert.NotEmpty(t, encrypt.Result, "encrypt result")
@@ -53,7 +50,6 @@ func TestOverAll(t *testing.T) {
 		KeyName:    keyName,
 		Ciphertext: encrypt.Result,
 		KeyVersion: 0,
-		EngineName: engineName,
 	})
 	assert.NoError(t, err)
 	assert.Equal(t, plainText, decrypt.Result, "decrpyt result")
