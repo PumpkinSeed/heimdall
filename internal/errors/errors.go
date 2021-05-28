@@ -185,6 +185,14 @@ const (
 	CodeClientDevHmac                 Code = "228"
 	CodeClientDevSign                 Code = "229"
 	CodeClientDevVerifySign           Code = "22_10_"
+	CodeClientDevRewrap               Code = "22_11_"
+	CodeClientDevUpdateKeyConfig      Code = "22_12_"
+	CodeClientDevRotate               Code = "22_13_"
+	CodeClientDevExport               Code = "22_14_"
+	CodeClientDevBackup               Code = "22_15_"
+	CodeClientDevRestore              Code = "22_16_"
+	CodeClientDevGenerateKey          Code = "22_17_"
+	CodeClientDevGenerateRandomBytes  Code = "22_18_"
 
 	CodePkgCrypto Code = "3"
 
