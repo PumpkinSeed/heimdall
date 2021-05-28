@@ -212,7 +212,7 @@ func (s server) Health(ctx context.Context, req *structs.HealthRequest) (*struct
 }
 
 func (s server) Rewrap(ctx context.Context, req *structs.RewrapRequest) (*structs.CryptoResult, error) {
-	rewrap, err := s.transit.Rewrap(ctx, req.KeyName, req.EngineName, transit.BatchRequestItem{
+	rewrap, err := s.transit.Rewrap(ctx, req.KeyName, getEngineName(ctx), transit.BatchRequestItem{
 		Context:    req.Context,
 		Plaintext:  req.PlainText,
 		Nonce:      req.Nonce,
@@ -230,7 +230,7 @@ func (s server) Rewrap(ctx context.Context, req *structs.RewrapRequest) (*struct
 }
 
 func (s server) UpdateKeyConfiguration(ctx context.Context, req *structs.KeyConfig) (*structs.Empty, error) {
-	err := s.transit.UpdateKeyConfiguration(ctx, req.KeyName, req.EngineName, transit.KeyConfiguration{
+	err := s.transit.UpdateKeyConfiguration(ctx, req.KeyName, getEngineName(ctx), transit.KeyConfiguration{
 		MinDecryptionVersion: utils.NullInt64FromPtr(req.MinDecryptionVersion),
 		MinEncryptionVersion: utils.NullInt64FromPtr(req.MinEncryptionVersion),
 		DeletionAllowed:      utils.NullBoolFromPtr(req.DeletionAllowed),
@@ -246,7 +246,7 @@ func (s server) UpdateKeyConfiguration(ctx context.Context, req *structs.KeyConf
 }
 
 func (s server) RotateKey(ctx context.Context, req *structs.RotateRequest) (*structs.Empty, error) {
-	err := s.transit.Rotate(ctx, req.KeyName, req.EngineName)
+	err := s.transit.Rotate(ctx, req.KeyName, getEngineName(ctx))
 	if err != nil {
 		log.Errorf("Error rotate key [%s]: %v", req.KeyName, err)
 		return nil, errors.Wrap(err, "grpc rotate key error", errors.CodeApiGrpcRotateKey)
@@ -256,7 +256,7 @@ func (s server) RotateKey(ctx context.Context, req *structs.RotateRequest) (*str
 }
 
 func (s server) ExportKey(ctx context.Context, req *structs.ExportRequest) (*structs.ExportResult, error) {
-	export, err := s.transit.Export(ctx, req.KeyName, req.EngineName, req.ExportType, req.Version)
+	export, err := s.transit.Export(ctx, req.KeyName, getEngineName(ctx), req.ExportType, req.Version)
 	if err != nil {
 		log.Errorf("Error rotate key [%s]: %v", req.KeyName, err)
 		return nil, errors.Wrap(err, "grpc export key error", errors.CodeApiGrpcExportKey)
@@ -272,7 +272,7 @@ func (s server) ExportKey(ctx context.Context, req *structs.ExportRequest) (*str
 }
 
 func (s server) BackupKey(ctx context.Context, req *structs.BackupRequest) (*structs.BackupResult, error) {
-	backup, err := s.transit.Backup(ctx, req.KeyName, req.EngineName)
+	backup, err := s.transit.Backup(ctx, req.KeyName, getEngineName(ctx))
 	if err != nil {
 		log.Errorf("Error backup key [%s]: %v", req.KeyName, err)
 		return nil, errors.Wrap(err, "grpc backup key error", errors.CodeApiGrpcBackupKey)
@@ -284,7 +284,7 @@ func (s server) BackupKey(ctx context.Context, req *structs.BackupRequest) (*str
 }
 
 func (s server) RestoreKey(ctx context.Context, req *structs.RestoreRequest) (*structs.Empty, error) {
-	err := s.transit.Restore(ctx, req.KeyName, req.EngineName, req.Backup64, req.Force)
+	err := s.transit.Restore(ctx, req.KeyName, getEngineName(ctx), req.Backup64, req.Force)
 	if err != nil {
 		log.Errorf("Error restore key [%s]: %v", req.KeyName, err)
 		return nil, errors.Wrap(err, "grpc restore key error", errors.CodeApiGrpcRestoreKey)
@@ -294,7 +294,7 @@ func (s server) RestoreKey(ctx context.Context, req *structs.RestoreRequest) (*s
 }
 
 func (s server) GenerateKey(ctx context.Context, req *structs.GenerateKeyRequest) (*structs.GenerateKeyResponse, error) {
-	key, err := s.transit.GenerateKey(ctx, req.EngineName, transit.GenerateRequest{
+	key, err := s.transit.GenerateKey(ctx, getEngineName(ctx), transit.GenerateRequest{
 		Name:       req.Name,
 		Plaintext:  req.Plaintext,
 		Context:    null.NewString(req.Context, true),
@@ -359,4 +359,3 @@ func getEngineName(ctx context.Context) string {
 	}
 	return ""
 }
-

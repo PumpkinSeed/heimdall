@@ -189,7 +189,6 @@ func (c *proxyClient) VerifySigned(ctx context.Context, in *structs.Verification
 }
 
 func (c *proxyClient) Rewrap(ctx context.Context, in *structs.RewrapRequest) (*structs.CryptoResult, error) {
-	in.EngineName = c.o.EngineName
 	out, err := c.next().Rewrap(ctx, in)
 	if err != nil {
 		return nil, errors.Wrap(err, "grpc client rewrap error", errors.CodeClientGrpcRewrap)
@@ -198,7 +197,6 @@ func (c *proxyClient) Rewrap(ctx context.Context, in *structs.RewrapRequest) (*s
 }
 
 func (c *proxyClient) UpdateKeyConfiguration(ctx context.Context, in *structs.KeyConfig) (*structs.Empty, error) {
-	in.EngineName = c.o.EngineName
 	out, err := c.next().UpdateKeyConfiguration(ctx, in)
 	if err != nil {
 		return nil, errors.Wrap(err, "grpc client update key config error", errors.CodeClientGrpcUpdateKeyConfig)
@@ -207,7 +205,6 @@ func (c *proxyClient) UpdateKeyConfiguration(ctx context.Context, in *structs.Ke
 }
 
 func (c *proxyClient) RotateKey(ctx context.Context, in *structs.RotateRequest) (*structs.Empty, error) {
-	in.EngineName = c.o.EngineName
 	out, err := c.next().RotateKey(ctx, in)
 	if err != nil {
 		return nil, errors.Wrap(err, "grpc client rotate key error", errors.CodeClientGrpcRotateKey)
@@ -216,7 +213,6 @@ func (c *proxyClient) RotateKey(ctx context.Context, in *structs.RotateRequest) 
 }
 
 func (c *proxyClient) ExportKey(ctx context.Context, in *structs.ExportRequest) (*structs.ExportResult, error) {
-	in.EngineName = c.o.EngineName
 	out, err := c.next().ExportKey(ctx, in)
 	if err != nil {
 		return nil, errors.Wrap(err, "grpc client export key error", errors.CodeClientGrpcExportKey)
@@ -225,7 +221,6 @@ func (c *proxyClient) ExportKey(ctx context.Context, in *structs.ExportRequest) 
 }
 
 func (c *proxyClient) BackupKey(ctx context.Context, in *structs.BackupRequest) (*structs.BackupResult, error) {
-	in.EngineName = c.o.EngineName
 	out, err := c.next().BackupKey(ctx, in)
 	if err != nil {
 		return nil, errors.Wrap(err, "grpc client backup key error", errors.CodeClientGrpcBackupKey)
@@ -234,7 +229,6 @@ func (c *proxyClient) BackupKey(ctx context.Context, in *structs.BackupRequest) 
 }
 
 func (c *proxyClient) RestoreKey(ctx context.Context, in *structs.RestoreRequest) (*structs.Empty, error) {
-	in.EngineName = c.o.EngineName
 	out, err := c.next().RestoreKey(ctx, in)
 	if err != nil {
 		return nil, errors.Wrap(err, "grpc client restore key error", errors.CodeClientGrpcRestoreKey)
@@ -243,7 +237,6 @@ func (c *proxyClient) RestoreKey(ctx context.Context, in *structs.RestoreRequest
 }
 
 func (c *proxyClient) GenerateKey(ctx context.Context, in *structs.GenerateKeyRequest) (*structs.GenerateKeyResponse, error) {
-	in.EngineName = c.o.EngineName
 	out, err := c.next().GenerateKey(ctx, in)
 	if err != nil {
 		return nil, errors.Wrap(err, "grpc client generate key error", errors.CodeClientGrpcGenerateKey)

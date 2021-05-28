@@ -165,7 +165,6 @@ message RewrapRequest {
     string context = 3;
     string nonce = 4;
     int64 keyVersion = 5;
-    string engineName = 6;
 }
 
 message KeyConfig {
@@ -175,19 +174,16 @@ message KeyConfig {
     optional bool deletionAllowed = 4;
     optional bool exportable = 5;
     optional bool allowPlaintextBackup = 6;
-    string engineName = 7;
 }
 
 message RotateRequest {
     string keyName = 1;
-    string engineName = 2;
 }
 
 message ExportRequest {
     string keyName = 1;
     string exportType = 2;
     string version = 3;
-    string engineName = 4;
 }
 
 message ExportResult {
@@ -196,7 +192,6 @@ message ExportResult {
 
 message BackupRequest {
     string keyName = 1;
-    string engineName = 2;
 }
 
 message BackupResult {
@@ -207,7 +202,6 @@ message RestoreRequest {
     string keyName = 1;
     string backup64 = 2;
     bool force = 3;
-    string engineName = 4;
 }
 
 message GenerateKeyRequest {
@@ -217,7 +211,6 @@ message GenerateKeyRequest {
     string nonce = 4;
     int64 bits = 5;
     int64 keyVersion = 6;
-    string engineName = 7;
 }
 
 message GenerateKeyResponse {

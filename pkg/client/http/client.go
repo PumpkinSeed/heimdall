@@ -16,7 +16,6 @@ import (
 	"google.golang.org/grpc"
 )
 
-// TODO update changes
 const (
 	defaultEnginePath = "transit/"
 	engineNameHeader  = "engineName"
@@ -155,8 +154,7 @@ func (c *proxyClient) VerifySigned(ctx context.Context, req *structs.Verificatio
 }
 
 func (c *proxyClient) Rewrap(ctx context.Context, req *structs.RewrapRequest) (*structs.CryptoResult, error) {
-	req.EngineName = c.o.EngineName
-	out, err := c.next().Rewrap(ctx, req)
+	out, err := c.next().Rewrap(buildEngineNameInterceptor(ctx, c.o.EngineName), req)
 	if err != nil {
 		return nil, errors.Wrap(err, "http client rewrap error", errors.CodeClientHttpRewrap)
 	}
@@ -164,8 +162,7 @@ func (c *proxyClient) Rewrap(ctx context.Context, req *structs.RewrapRequest) (*
 }
 
 func (c *proxyClient) UpdateKeyConfiguration(ctx context.Context, req *structs.KeyConfig) (*structs.Empty, error) {
-	req.EngineName = c.o.EngineName
-	out, err := c.next().UpdateKeyConfiguration(ctx, req)
+	out, err := c.next().UpdateKeyConfiguration(buildEngineNameInterceptor(ctx, c.o.EngineName), req)
 	if err != nil {
 		return nil, errors.Wrap(err, "http client update key config error", errors.CodeClientHttpUpdateKeyConfig)
 	}
@@ -173,8 +170,7 @@ func (c *proxyClient) UpdateKeyConfiguration(ctx context.Context, req *structs.K
 }
 
 func (c *proxyClient) RotateKey(ctx context.Context, req *structs.RotateRequest) (*structs.Empty, error) {
-	req.EngineName = c.o.EngineName
-	out, err := c.next().RotateKey(ctx, req)
+	out, err := c.next().RotateKey(buildEngineNameInterceptor(ctx, c.o.EngineName), req)
 	if err != nil {
 		return nil, errors.Wrap(err, "http client rotate error", errors.CodeClientHttpRotateKey)
 	}
@@ -182,8 +178,7 @@ func (c *proxyClient) RotateKey(ctx context.Context, req *structs.RotateRequest)
 }
 
 func (c *proxyClient) ExportKey(ctx context.Context, req *structs.ExportRequest) (*structs.ExportResult, error) {
-	req.EngineName = c.o.EngineName
-	out, err := c.next().ExportKey(ctx, req)
+	out, err := c.next().ExportKey(buildEngineNameInterceptor(ctx, c.o.EngineName), req)
 	if err != nil {
 		return nil, errors.Wrap(err, "http client export error", errors.CodeClientHttpExport)
 	}
@@ -191,8 +186,7 @@ func (c *proxyClient) ExportKey(ctx context.Context, req *structs.ExportRequest)
 }
 
 func (c *proxyClient) BackupKey(ctx context.Context, req *structs.BackupRequest) (*structs.BackupResult, error) {
-	req.EngineName = c.o.EngineName
-	out, err := c.next().BackupKey(ctx, req)
+	out, err := c.next().BackupKey(buildEngineNameInterceptor(ctx, c.o.EngineName), req)
 	if err != nil {
 		return nil, errors.Wrap(err, "http client backup error", errors.CodeClientHttpBackup)
 	}
@@ -200,8 +194,7 @@ func (c *proxyClient) BackupKey(ctx context.Context, req *structs.BackupRequest)
 }
 
 func (c *proxyClient) RestoreKey(ctx context.Context, req *structs.RestoreRequest) (*structs.Empty, error) {
-	req.EngineName = c.o.EngineName
-	out, err := c.next().RestoreKey(ctx, req)
+	out, err := c.next().RestoreKey(buildEngineNameInterceptor(ctx, c.o.EngineName), req)
 	if err != nil {
 		return nil, errors.Wrap(err, "http client restore error", errors.CodeClientHttpRestore)
 	}
@@ -209,8 +202,7 @@ func (c *proxyClient) RestoreKey(ctx context.Context, req *structs.RestoreReques
 }
 
 func (c *proxyClient) GenerateKey(ctx context.Context, req *structs.GenerateKeyRequest) (*structs.GenerateKeyResponse, error) {
-	req.EngineName = c.o.EngineName
-	out, err := c.next().GenerateKey(ctx, req)
+	out, err := c.next().GenerateKey(buildEngineNameInterceptor(ctx, c.o.EngineName), req)
 	if err != nil {
 		return nil, errors.Wrap(err, "http client generate key error", errors.CodeClientHttpGenerate)
 	}
@@ -218,7 +210,7 @@ func (c *proxyClient) GenerateKey(ctx context.Context, req *structs.GenerateKeyR
 }
 
 func (c *proxyClient) GenerateRandomBytes(ctx context.Context, req *structs.GenerateBytesRequest) (*structs.GenerateBytesResponse, error) {
-	out, err := c.next().GenerateRandomBytes(context.WithValue(ctx, engineNameHeader, c.o.EngineName), req)
+	out, err := c.next().GenerateRandomBytes(buildEngineNameInterceptor(ctx, c.o.EngineName), req)
 	if err != nil {
 		return nil, errors.Wrap(err, "http client generate random bytes error", errors.CodeClientHttpGenerateRandomBytes)
 	}
@@ -517,10 +509,7 @@ func (h httpClient) VerifySigned(ctx context.Context, in *structs.VerificationRe
 }
 
 func (h httpClient) Rewrap(ctx context.Context, in *structs.RewrapRequest, opts ...grpc.CallOption) (*structs.CryptoResult, error) {
-	if in.EngineName == "" {
-		in.EngineName = defaultEnginePath
-	}
-	r := h.NewRequest(http.MethodPost, fmt.Sprintf("/%s/rewrap/%s", in.EngineName, in.KeyName))
+	r := h.NewRequest(http.MethodPost, fmt.Sprintf("/%s/rewrap/%s", h.getEngineName(ctx), in.KeyName))
 	if err := r.SetJSONBody(in); err != nil {
 		return nil, err
 	}
@@ -545,10 +534,7 @@ func (h httpClient) Rewrap(ctx context.Context, in *structs.RewrapRequest, opts 
 }
 
 func (h httpClient) UpdateKeyConfiguration(ctx context.Context, in *structs.KeyConfig, opts ...grpc.CallOption) (*structs.Empty, error) {
-	if in.EngineName == "" {
-		in.EngineName = defaultEnginePath
-	}
-	r := h.NewRequest(http.MethodPost, fmt.Sprintf("/%s/keys/%s/config", in.EngineName, in.KeyName))
+	r := h.NewRequest(http.MethodPost, fmt.Sprintf("/%s/keys/%s/config", h.getEngineName(ctx), in.KeyName))
 	if err := r.SetJSONBody(in); err != nil {
 		return nil, err
 	}
@@ -565,10 +551,7 @@ func (h httpClient) UpdateKeyConfiguration(ctx context.Context, in *structs.KeyC
 }
 
 func (h httpClient) RotateKey(ctx context.Context, in *structs.RotateRequest, opts ...grpc.CallOption) (*structs.Empty, error) {
-	if in.EngineName == "" {
-		in.EngineName = defaultEnginePath
-	}
-	r := h.NewRequest(http.MethodPost, fmt.Sprintf("/%s/keys/%s/rotate", in.EngineName, in.KeyName))
+	r := h.NewRequest(http.MethodPost, fmt.Sprintf("/%s/keys/%s/rotate", h.getEngineName(ctx), in.KeyName))
 	if err := r.SetJSONBody(in); err != nil {
 		return nil, err
 	}
@@ -585,10 +568,7 @@ func (h httpClient) RotateKey(ctx context.Context, in *structs.RotateRequest, op
 }
 
 func (h httpClient) ExportKey(ctx context.Context, in *structs.ExportRequest, opts ...grpc.CallOption) (*structs.ExportResult, error) {
-	if in.EngineName == "" {
-		in.EngineName = defaultEnginePath
-	}
-	r := h.NewRequest(http.MethodGet, fmt.Sprintf("/%s/export/%s/%s/%s", in.EngineName, in.ExportType, in.KeyName, in.Version))
+	r := h.NewRequest(http.MethodGet, fmt.Sprintf("/%s/export/%s/%s/%s", h.getEngineName(ctx), in.ExportType, in.KeyName, in.Version))
 	resp, err := h.RawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
@@ -611,10 +591,7 @@ func (h httpClient) ExportKey(ctx context.Context, in *structs.ExportRequest, op
 }
 
 func (h httpClient) BackupKey(ctx context.Context, in *structs.BackupRequest, opts ...grpc.CallOption) (*structs.BackupResult, error) {
-	if in.EngineName == "" {
-		in.EngineName = defaultEnginePath
-	}
-	r := h.NewRequest(http.MethodGet, fmt.Sprintf("/%s/backup/%s", in.EngineName, in.KeyName))
+	r := h.NewRequest(http.MethodGet, fmt.Sprintf("/%s/backup/%s", h.getEngineName(ctx), in.KeyName))
 	resp, err := h.RawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
@@ -637,10 +614,7 @@ func (h httpClient) BackupKey(ctx context.Context, in *structs.BackupRequest, op
 }
 
 func (h httpClient) RestoreKey(ctx context.Context, in *structs.RestoreRequest, opts ...grpc.CallOption) (*structs.Empty, error) {
-	if in.EngineName == "" {
-		in.EngineName = defaultEnginePath
-	}
-	r := h.NewRequest(http.MethodPost, fmt.Sprintf("/%s/restore/%s", in.EngineName, in.KeyName))
+	r := h.NewRequest(http.MethodPost, fmt.Sprintf("/%s/restore/%s", h.getEngineName(ctx), in.KeyName))
 	if err := r.SetJSONBody(in); err != nil {
 		return nil, err
 	}
@@ -657,10 +631,7 @@ func (h httpClient) RestoreKey(ctx context.Context, in *structs.RestoreRequest, 
 }
 
 func (h httpClient) GenerateKey(ctx context.Context, in *structs.GenerateKeyRequest, opts ...grpc.CallOption) (*structs.GenerateKeyResponse, error) {
-	if in.EngineName == "" {
-		in.EngineName = defaultEnginePath
-	}
-	r := h.NewRequest(http.MethodPost, fmt.Sprintf("/%s/datakey/%s/%s", in.EngineName, in.Plaintext, in.Name))
+	r := h.NewRequest(http.MethodPost, fmt.Sprintf("/%s/datakey/%s/%s", h.getEngineName(ctx), in.Plaintext, in.Name))
 	if err := r.SetJSONBody(in); err != nil {
 		return nil, err
 	}
@@ -686,11 +657,7 @@ func (h httpClient) GenerateKey(ctx context.Context, in *structs.GenerateKeyRequ
 }
 
 func (h httpClient) GenerateRandomBytes(ctx context.Context, in *structs.GenerateBytesRequest, opts ...grpc.CallOption) (*structs.GenerateBytesResponse, error) {
-	engineName := ctx.Value(engineNameHeader)
-	if engineName == "" {
-		engineName = defaultEnginePath
-	}
-	r := h.NewRequest(http.MethodPost, fmt.Sprintf("/%s/random/%d", engineName, in.BytesCount))
+	r := h.NewRequest(http.MethodPost, fmt.Sprintf("/%s/random/%d", h.getEngineName(ctx), in.BytesCount))
 	if err := r.SetJSONBody(in); err != nil {
 		return nil, err
 	}
