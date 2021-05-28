@@ -16,9 +16,10 @@ import (
 	"google.golang.org/grpc"
 )
 
+// TODO update changes
 const (
 	defaultEnginePath = "transit/"
-	engineNameKey     = "engineName"
+	engineNameHeader  = "engineName"
 )
 
 type Options struct {
@@ -74,8 +75,7 @@ func (c *proxyClient) next() structs.EncryptionClient {
 }
 
 func (c *proxyClient) CreateKey(ctx context.Context, key *structs.Key) (*structs.KeyResponse, error) {
-	key.EngineName = c.o.EngineName
-	createKey, err := c.next().CreateKey(ctx, key)
+	createKey, err := c.next().CreateKey(buildEngineNameInterceptor(ctx, c.o.EngineName), key)
 	if err != nil {
 		return nil, errors.Wrap(err, "http client create key error", errors.CodeClientHttpCreateKey)
 	}
@@ -83,7 +83,7 @@ func (c *proxyClient) CreateKey(ctx context.Context, key *structs.Key) (*structs
 }
 
 func (c *proxyClient) ReadKey(ctx context.Context, keyName string) (*structs.KeyResponse, error) {
-	key, err := c.next().ReadKey(ctx, &structs.KeyName{Name: keyName, EngineName: c.o.EngineName})
+	key, err := c.next().ReadKey(buildEngineNameInterceptor(ctx, c.o.EngineName), &structs.KeyName{Name: keyName})
 	if err != nil {
 		return nil, errors.Wrap(err, "http client read key error", errors.CodeClientHttpReadKey)
 	}
@@ -91,7 +91,7 @@ func (c *proxyClient) ReadKey(ctx context.Context, keyName string) (*structs.Key
 }
 
 func (c *proxyClient) DeleteKey(ctx context.Context, keyName string) (*structs.KeyResponse, error) {
-	key, err := c.next().DeleteKey(ctx, &structs.KeyName{Name: keyName, EngineName: c.o.EngineName})
+	key, err := c.next().DeleteKey(buildEngineNameInterceptor(ctx, c.o.EngineName), &structs.KeyName{Name: keyName})
 	if err != nil {
 		return nil, errors.Wrap(err, "http client delete key error", errors.CodeClientHttpDeleteKey)
 	}
@@ -99,7 +99,7 @@ func (c *proxyClient) DeleteKey(ctx context.Context, keyName string) (*structs.K
 }
 
 func (c *proxyClient) ListKeys(ctx context.Context) (*structs.KeyListResponse, error) {
-	keys, err := c.next().ListKeys(ctx, &structs.Empty{EngineName: c.o.EngineName})
+	keys, err := c.next().ListKeys(buildEngineNameInterceptor(ctx, c.o.EngineName), &structs.Empty{})
 	if err != nil {
 		return nil, errors.Wrap(err, "http client list keys error", errors.CodeClientHttpListKey)
 	}
@@ -107,8 +107,7 @@ func (c *proxyClient) ListKeys(ctx context.Context) (*structs.KeyListResponse, e
 }
 
 func (c *proxyClient) Encrypt(ctx context.Context, req *structs.EncryptRequest) (*structs.CryptoResult, error) {
-	req.EngineName = c.o.EngineName
-	encrypt, err := c.next().Encrypt(ctx, req)
+	encrypt, err := c.next().Encrypt(buildEngineNameInterceptor(ctx, c.o.EngineName), req)
 	if err != nil {
 		return nil, errors.Wrap(err, "http client encrypt error", errors.CodeClientHttpEncrypt)
 	}
@@ -116,8 +115,7 @@ func (c *proxyClient) Encrypt(ctx context.Context, req *structs.EncryptRequest) 
 }
 
 func (c *proxyClient) Decrypt(ctx context.Context, req *structs.DecryptRequest) (*structs.CryptoResult, error) {
-	req.EngineName = c.o.EngineName
-	decrypt, err := c.next().Decrypt(ctx, req)
+	decrypt, err := c.next().Decrypt(buildEngineNameInterceptor(ctx, c.o.EngineName), req)
 	if err != nil {
 		return nil, errors.Wrap(err, "http client decrypt error", errors.CodeClientHttpDecrypt)
 	}
@@ -125,8 +123,7 @@ func (c *proxyClient) Decrypt(ctx context.Context, req *structs.DecryptRequest) 
 }
 
 func (c *proxyClient) Hash(ctx context.Context, req *structs.HashRequest) (*structs.HashResponse, error) {
-	req.EngineName = c.o.EngineName
-	hash, err := c.next().Hash(ctx, req)
+	hash, err := c.next().Hash(buildEngineNameInterceptor(ctx, c.o.EngineName), req)
 	if err != nil {
 		return nil, errors.Wrap(err, "http client hash error", errors.CodeClientHttpHash)
 	}
@@ -134,8 +131,7 @@ func (c *proxyClient) Hash(ctx context.Context, req *structs.HashRequest) (*stru
 }
 
 func (c *proxyClient) GenerateHMAC(ctx context.Context, req *structs.HMACRequest) (*structs.HMACResponse, error) {
-	req.EngineName = c.o.EngineName
-	hmac, err := c.next().GenerateHMAC(ctx, req)
+	hmac, err := c.next().GenerateHMAC(buildEngineNameInterceptor(ctx, c.o.EngineName), req)
 	if err != nil {
 		return nil, errors.Wrap(err, "http client hmac error", errors.CodeClientHttpHmac)
 	}
@@ -143,8 +139,7 @@ func (c *proxyClient) GenerateHMAC(ctx context.Context, req *structs.HMACRequest
 }
 
 func (c *proxyClient) Sign(ctx context.Context, req *structs.SignParameters) (*structs.SignResponse, error) {
-	req.EngineName = c.o.EngineName
-	sign, err := c.next().Sign(ctx, req)
+	sign, err := c.next().Sign(buildEngineNameInterceptor(ctx, c.o.EngineName), req)
 	if err != nil {
 		return nil, errors.Wrap(err, "http client sign error", errors.CodeClientHttpSign)
 	}
@@ -152,8 +147,7 @@ func (c *proxyClient) Sign(ctx context.Context, req *structs.SignParameters) (*s
 }
 
 func (c *proxyClient) VerifySigned(ctx context.Context, req *structs.VerificationRequest) (*structs.VerificationResponse, error) {
-	req.EngineName = c.o.EngineName
-	signed, err := c.next().VerifySigned(ctx, req)
+	signed, err := c.next().VerifySigned(buildEngineNameInterceptor(ctx, c.o.EngineName), req)
 	if err != nil {
 		return nil, errors.Wrap(err, "http client verify sign error", errors.CodeClientHttpVerifySign)
 	}
@@ -224,7 +218,7 @@ func (c *proxyClient) GenerateKey(ctx context.Context, req *structs.GenerateKeyR
 }
 
 func (c *proxyClient) GenerateRandomBytes(ctx context.Context, req *structs.GenerateBytesRequest) (*structs.GenerateBytesResponse, error) {
-	out, err := c.next().GenerateRandomBytes(context.WithValue(ctx, engineNameKey, c.o.EngineName), req)
+	out, err := c.next().GenerateRandomBytes(context.WithValue(ctx, engineNameHeader, c.o.EngineName), req)
 	if err != nil {
 		return nil, errors.Wrap(err, "http client generate random bytes error", errors.CodeClientHttpGenerateRandomBytes)
 	}
@@ -238,6 +232,10 @@ func (c *proxyClient) Health(ctx context.Context, in *structs.HealthRequest) (*s
 		}
 	}
 	return nil, errors.New("invalid address", errors.CodeClientHttp)
+}
+
+func buildEngineNameInterceptor(ctx context.Context, engineName string) context.Context {
+	return context.WithValue(ctx, engineNameHeader, engineName)
 }
 
 // wrapper for vault client, implements the EncryptionClient interface
@@ -268,10 +266,7 @@ func (h httpClient) Health(ctx context.Context, in *structs.HealthRequest, opts 
 }
 
 func (h httpClient) CreateKey(ctx context.Context, in *structs.Key, opts ...grpc.CallOption) (*structs.KeyResponse, error) {
-	if in.EngineName == "" {
-		in.EngineName = defaultEnginePath
-	}
-	r := h.NewRequest(http.MethodPost, fmt.Sprintf("/%s/key", in.EngineName))
+	r := h.NewRequest(http.MethodPost, fmt.Sprintf("/%s/key", h.getEngineName(ctx)))
 	if err := r.SetJSONBody(in); err != nil {
 		return nil, err
 	}
@@ -296,10 +291,7 @@ func (h httpClient) CreateKey(ctx context.Context, in *structs.Key, opts ...grpc
 }
 
 func (h httpClient) ReadKey(ctx context.Context, in *structs.KeyName, opts ...grpc.CallOption) (*structs.KeyResponse, error) {
-	if in.EngineName == "" {
-		in.EngineName = defaultEnginePath
-	}
-	r := h.NewRequest(http.MethodGet, fmt.Sprintf("/%s/key/%s", in.EngineName, in.Name))
+	r := h.NewRequest(http.MethodGet, fmt.Sprintf("/%s/key/%s", h.getEngineName(ctx), in.Name))
 	if err := r.SetJSONBody(in); err != nil {
 		return nil, err
 	}
@@ -324,10 +316,7 @@ func (h httpClient) ReadKey(ctx context.Context, in *structs.KeyName, opts ...gr
 }
 
 func (h httpClient) DeleteKey(ctx context.Context, in *structs.KeyName, opts ...grpc.CallOption) (*structs.KeyResponse, error) {
-	if in.EngineName == "" {
-		in.EngineName = defaultEnginePath
-	}
-	r := h.NewRequest(http.MethodDelete, fmt.Sprintf("/%s/key/%s", in.EngineName, in.Name))
+	r := h.NewRequest(http.MethodDelete, fmt.Sprintf("/%s/key/%s", h.getEngineName(ctx), in.Name))
 	if err := r.SetJSONBody(in); err != nil {
 		return nil, err
 	}
@@ -353,10 +342,7 @@ func (h httpClient) DeleteKey(ctx context.Context, in *structs.KeyName, opts ...
 }
 
 func (h httpClient) ListKeys(ctx context.Context, in *structs.Empty, opts ...grpc.CallOption) (*structs.KeyListResponse, error) {
-	if in.EngineName == "" {
-		in.EngineName = defaultEnginePath
-	}
-	r := h.NewRequest(http.MethodGet, fmt.Sprintf("/%s/key", in.EngineName))
+	r := h.NewRequest(http.MethodGet, fmt.Sprintf("/%s/key", h.getEngineName(ctx)))
 	if err := r.SetJSONBody(in); err != nil {
 		return nil, err
 	}
@@ -381,10 +367,7 @@ func (h httpClient) ListKeys(ctx context.Context, in *structs.Empty, opts ...grp
 }
 
 func (h httpClient) Encrypt(ctx context.Context, in *structs.EncryptRequest, opts ...grpc.CallOption) (*structs.CryptoResult, error) {
-	if in.EngineName == "" {
-		in.EngineName = defaultEnginePath
-	}
-	r := h.NewRequest(http.MethodPost, fmt.Sprintf("/%s/encrypt", in.EngineName))
+	r := h.NewRequest(http.MethodPost, fmt.Sprintf("/%s/encrypt", h.getEngineName(ctx)))
 	if err := r.SetJSONBody(in); err != nil {
 		return nil, err
 	}
@@ -409,10 +392,7 @@ func (h httpClient) Encrypt(ctx context.Context, in *structs.EncryptRequest, opt
 }
 
 func (h httpClient) Decrypt(ctx context.Context, in *structs.DecryptRequest, opts ...grpc.CallOption) (*structs.CryptoResult, error) {
-	if in.EngineName == "" {
-		in.EngineName = defaultEnginePath
-	}
-	r := h.NewRequest(http.MethodPost, fmt.Sprintf("/%s/decrypt", in.EngineName))
+	r := h.NewRequest(http.MethodPost, fmt.Sprintf("/%s/decrypt", h.getEngineName(ctx)))
 	if err := r.SetJSONBody(in); err != nil {
 		return nil, err
 	}
@@ -437,10 +417,7 @@ func (h httpClient) Decrypt(ctx context.Context, in *structs.DecryptRequest, opt
 }
 
 func (h httpClient) Hash(ctx context.Context, in *structs.HashRequest, opts ...grpc.CallOption) (*structs.HashResponse, error) {
-	if in.EngineName == "" {
-		in.EngineName = defaultEnginePath
-	}
-	r := h.NewRequest(http.MethodPost, fmt.Sprintf("/%s/hash", in.EngineName))
+	r := h.NewRequest(http.MethodPost, fmt.Sprintf("/%s/hash", h.getEngineName(ctx)))
 	if err := r.SetJSONBody(in); err != nil {
 		return nil, err
 	}
@@ -465,10 +442,7 @@ func (h httpClient) Hash(ctx context.Context, in *structs.HashRequest, opts ...g
 }
 
 func (h httpClient) GenerateHMAC(ctx context.Context, in *structs.HMACRequest, opts ...grpc.CallOption) (*structs.HMACResponse, error) {
-	if in.EngineName == "" {
-		in.EngineName = defaultEnginePath
-	}
-	r := h.NewRequest(http.MethodPost, fmt.Sprintf("/%s/hmac", in.EngineName))
+	r := h.NewRequest(http.MethodPost, fmt.Sprintf("/%s/hmac", h.getEngineName(ctx)))
 	if err := r.SetJSONBody(in); err != nil {
 		return nil, err
 	}
@@ -493,10 +467,7 @@ func (h httpClient) GenerateHMAC(ctx context.Context, in *structs.HMACRequest, o
 }
 
 func (h httpClient) Sign(ctx context.Context, in *structs.SignParameters, opts ...grpc.CallOption) (*structs.SignResponse, error) {
-	if in.EngineName == "" {
-		in.EngineName = defaultEnginePath
-	}
-	r := h.NewRequest(http.MethodPost, fmt.Sprintf("/%s/sign", in.EngineName))
+	r := h.NewRequest(http.MethodPost, fmt.Sprintf("/%s/sign", h.getEngineName(ctx)))
 	if err := r.SetJSONBody(in); err != nil {
 		return nil, err
 	}
@@ -521,10 +492,7 @@ func (h httpClient) Sign(ctx context.Context, in *structs.SignParameters, opts .
 }
 
 func (h httpClient) VerifySigned(ctx context.Context, in *structs.VerificationRequest, opts ...grpc.CallOption) (*structs.VerificationResponse, error) {
-	if in.EngineName == "" {
-		in.EngineName = defaultEnginePath
-	}
-	r := h.NewRequest(http.MethodPost, fmt.Sprintf("/%s/verify", in.EngineName))
+	r := h.NewRequest(http.MethodPost, fmt.Sprintf("/%s/verify", h.getEngineName(ctx)))
 	if err := r.SetJSONBody(in); err != nil {
 		return nil, err
 	}
@@ -718,7 +686,7 @@ func (h httpClient) GenerateKey(ctx context.Context, in *structs.GenerateKeyRequ
 }
 
 func (h httpClient) GenerateRandomBytes(ctx context.Context, in *structs.GenerateBytesRequest, opts ...grpc.CallOption) (*structs.GenerateBytesResponse, error) {
-	engineName := ctx.Value(engineNameKey)
+	engineName := ctx.Value(engineNameHeader)
 	if engineName == "" {
 		engineName = defaultEnginePath
 	}
@@ -745,4 +713,12 @@ func (h httpClient) GenerateRandomBytes(ctx context.Context, in *structs.Generat
 		return &keyResp, nil
 	}
 	return nil, err
+}
+
+func (h httpClient) getEngineName(ctx context.Context) string {
+	en := ctx.Value(engineNameHeader).(string)
+	if en == "" {
+		return defaultEnginePath
+	}
+	return en
 }

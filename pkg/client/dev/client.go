@@ -196,8 +196,7 @@ func (d *devClient) GenerateHMAC(ctx context.Context, hmacReq *structs.HMACReque
 }
 
 func (d *devClient) Sign(ctx context.Context, req *structs.SignParameters) (*structs.SignResponse, error) {
-	req.EngineName = defaultEngine
-	signature, err := d.transit.Sign(ctx, req)
+	signature, err := d.transit.Sign(ctx, req, defaultEngine)
 	if err != nil {
 		log.Debugf("Error generating sign: %v", err)
 
@@ -208,8 +207,7 @@ func (d *devClient) Sign(ctx context.Context, req *structs.SignParameters) (*str
 }
 
 func (d *devClient) VerifySigned(ctx context.Context, req *structs.VerificationRequest) (*structs.VerificationResponse, error) {
-	req.EngineName = defaultEngine
-	verificationResult, err := d.transit.VerifySign(ctx, req)
+	verificationResult, err := d.transit.VerifySign(ctx, req, defaultEngine)
 	if err != nil {
 		log.Debugf("Error validating signature %v", err)
 

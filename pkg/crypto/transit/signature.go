@@ -10,9 +10,9 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 )
 
-func (t *Transit) Sign(ctx context.Context, req *structs.SignParameters) (*structs.SignResponse, error) {
+func (t *Transit) Sign(ctx context.Context, req *structs.SignParameters, engineName string) (*structs.SignResponse, error) {
 	p, _, err := t.lm.GetPolicy(ctx, keysutil.PolicyRequest{
-		Storage: t.u.Storage(req.EngineName),
+		Storage: t.u.Storage(engineName),
 		Name:    req.KeyName,
 	}, rand.Reader)
 
@@ -67,9 +67,9 @@ func (t *Transit) Sign(ctx context.Context, req *structs.SignParameters) (*struc
 	}, nil
 }
 
-func (t *Transit) VerifySign(ctx context.Context, req *structs.VerificationRequest) (*structs.VerificationResponse, error) {
+func (t *Transit) VerifySign(ctx context.Context, req *structs.VerificationRequest, engineName string) (*structs.VerificationResponse, error) {
 	p, _, err := t.lm.GetPolicy(ctx, keysutil.PolicyRequest{
-		Storage: t.u.Storage(req.EngineName),
+		Storage: t.u.Storage(engineName),
 		Name:    req.KeyName,
 	}, rand.Reader)
 
