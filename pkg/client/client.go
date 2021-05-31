@@ -25,5 +25,13 @@ type Client interface {
 	GenerateHMAC(ctx context.Context, hmac *structs.HMACRequest) (*structs.HMACResponse, error)
 	Sign(ctx context.Context, in *structs.SignParameters) (*structs.SignResponse, error)
 	VerifySigned(ctx context.Context, in *structs.VerificationRequest) (*structs.VerificationResponse, error)
+	Rewrap(ctx context.Context, in *structs.RewrapRequest) (*structs.CryptoResult, error)
+	UpdateKeyConfiguration(ctx context.Context, in *structs.KeyConfig) (*structs.Empty, error)
+	RotateKey(ctx context.Context, in *structs.RotateRequest) (*structs.Empty, error)
+	ExportKey(ctx context.Context, in *structs.ExportRequest) (*structs.ExportResult, error)
+	BackupKey(ctx context.Context, in *structs.BackupRequest) (*structs.BackupResult, error)
+	RestoreKey(ctx context.Context, in *structs.RestoreRequest) (*structs.Empty, error)
+	GenerateKey(ctx context.Context, in *structs.GenerateKeyRequest) (*structs.GenerateKeyResponse, error)
+	GenerateRandomBytes(ctx context.Context, in *structs.GenerateBytesRequest) (*structs.GenerateBytesResponse, error)
 	Health(ctx context.Context, in *structs.HealthRequest) (*structs.HealthResponse, error)
 }

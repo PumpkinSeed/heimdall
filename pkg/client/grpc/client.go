@@ -188,6 +188,70 @@ func (c *proxyClient) VerifySigned(ctx context.Context, in *structs.Verification
 	return signed, nil
 }
 
+func (c *proxyClient) Rewrap(ctx context.Context, in *structs.RewrapRequest) (*structs.CryptoResult, error) {
+	out, err := c.next().Rewrap(ctx, in)
+	if err != nil {
+		return nil, errors.Wrap(err, "grpc client rewrap error", errors.CodeClientGrpcRewrap)
+	}
+	return out, nil
+}
+
+func (c *proxyClient) UpdateKeyConfiguration(ctx context.Context, in *structs.KeyConfig) (*structs.Empty, error) {
+	out, err := c.next().UpdateKeyConfiguration(ctx, in)
+	if err != nil {
+		return nil, errors.Wrap(err, "grpc client update key config error", errors.CodeClientGrpcUpdateKeyConfig)
+	}
+	return out, nil
+}
+
+func (c *proxyClient) RotateKey(ctx context.Context, in *structs.RotateRequest) (*structs.Empty, error) {
+	out, err := c.next().RotateKey(ctx, in)
+	if err != nil {
+		return nil, errors.Wrap(err, "grpc client rotate key error", errors.CodeClientGrpcRotateKey)
+	}
+	return out, nil
+}
+
+func (c *proxyClient) ExportKey(ctx context.Context, in *structs.ExportRequest) (*structs.ExportResult, error) {
+	out, err := c.next().ExportKey(ctx, in)
+	if err != nil {
+		return nil, errors.Wrap(err, "grpc client export key error", errors.CodeClientGrpcExportKey)
+	}
+	return out, nil
+}
+
+func (c *proxyClient) BackupKey(ctx context.Context, in *structs.BackupRequest) (*structs.BackupResult, error) {
+	out, err := c.next().BackupKey(ctx, in)
+	if err != nil {
+		return nil, errors.Wrap(err, "grpc client backup key error", errors.CodeClientGrpcBackupKey)
+	}
+	return out, nil
+}
+
+func (c *proxyClient) RestoreKey(ctx context.Context, in *structs.RestoreRequest) (*structs.Empty, error) {
+	out, err := c.next().RestoreKey(ctx, in)
+	if err != nil {
+		return nil, errors.Wrap(err, "grpc client restore key error", errors.CodeClientGrpcRestoreKey)
+	}
+	return out, nil
+}
+
+func (c *proxyClient) GenerateKey(ctx context.Context, in *structs.GenerateKeyRequest) (*structs.GenerateKeyResponse, error) {
+	out, err := c.next().GenerateKey(ctx, in)
+	if err != nil {
+		return nil, errors.Wrap(err, "grpc client generate key error", errors.CodeClientGrpcGenerateKey)
+	}
+	return out, nil
+}
+
+func (c *proxyClient) GenerateRandomBytes(ctx context.Context, in *structs.GenerateBytesRequest) (*structs.GenerateBytesResponse, error) {
+	out, err := c.next().GenerateRandomBytes(ctx, in)
+	if err != nil {
+		return nil, errors.Wrap(err, "grpc client generate random bytes error", errors.CodeClientGrpcGenerateRandomBytes)
+	}
+	return out, nil
+}
+
 func (c *proxyClient) Health(ctx context.Context, in *structs.HealthRequest) (*structs.HealthResponse, error) {
 	return c.next().Health(ctx, in)
 }

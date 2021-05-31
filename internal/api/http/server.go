@@ -2,7 +2,9 @@ package http
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/PumpkinSeed/heimdall/internal/errors"
@@ -12,6 +14,7 @@ import (
 	"github.com/PumpkinSeed/heimdall/pkg/healthcheck"
 	"github.com/PumpkinSeed/heimdall/pkg/structs"
 	"github.com/PumpkinSeed/heimdall/pkg/token"
+	"github.com/emvi/null"
 	"github.com/go-chi/chi/v5"
 	log "github.com/sirupsen/logrus"
 )
@@ -96,6 +99,8 @@ func (s *server) Init() {
 		r.Get("/key", s.ListKeys)
 		r.Get("/key/{key}", s.ReadKey)
 		r.Delete("/key/{key}", s.DeleteKey)
+		r.Post("/keys/{key}/config", s.UpdateKeyConfiguration)
+		r.Post("/keys/{key}/rotate", s.RotateKey)
 
 		r.Post("/encrypt", s.Encrypt)
 		r.Post("/decrypt", s.Decrypt)
@@ -103,6 +108,13 @@ func (s *server) Init() {
 		r.Post("/hmac", s.GenerateHMAC)
 		r.Post("/sign", s.Sign)
 		r.Post("/verify", s.VerifySigned)
+
+		r.Post("/rewrap/{key}", s.Rewrap)
+		r.Get("/export/{keyType}/{keyName}/{version}", s.ExportKey)
+		r.Get("/backup/{keyName}", s.BackupKey)
+		r.Post("/restore/{keyName}", s.RestoreKey)
+		r.Post("/datakey/{keyType}/{keyName}", s.GenerateKey)
+		r.Post("/random/{bytesCount:[0-9]+}", s.GenerateRandomBytes)
 	})
 }
 
@@ -387,6 +399,277 @@ func (s server) Health(w http.ResponseWriter, r *http.Request) {
 	successResponse(w, s.health.Check(r.Context()))
 }
 
+func (s server) Rewrap(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	var req structs.RewrapRequest
+	if err := bind(r, &req); err != nil {
+		log.Error(errors.Wrap(err, "http rewrap key bind error", errors.CodeApiHTTPRewrapKey))
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	engineName := r.Context().Value(ctxKeyEngine).(string)
+	if engineName == "" {
+		log.Error(errors.New("http missing engine name", errors.CodeApiHTTPRewrapKeyEngineName))
+		http.Error(w, "missing engine name", http.StatusBadRequest)
+		return
+	}
+	result, err := s.transit.Rewrap(ctx, req.KeyName, engineName, transit.BatchRequestItem{
+		Context:    req.Context,
+		Plaintext:  req.PlainText,
+		Nonce:      req.Nonce,
+		KeyVersion: int(req.KeyVersion),
+	})
+	if err != nil {
+		log.Error(errors.Wrap(err, "http transit call rewrap key error", errors.CodeApiHTTPRewrapKey))
+		http.Error(w, "internal server error "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	successResponse(w, structs.CryptoResult{
+		Result: result.Ciphertext,
+	})
+}
+
+func (s server) UpdateKeyConfiguration(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	key := chi.URLParam(r, "key")
+	if key == "" {
+		log.Error(errors.New("key not found", errors.CodeApiHTTPUpdateKeyConfigReadKey))
+		http.Error(w, "key not found", http.StatusBadRequest)
+		return
+	}
+	var req structs.KeyConfig
+	if err := bind(r, &req); err != nil {
+		log.Error(errors.Wrap(err, "http update key config bind error", errors.CodeApiHTTPUpdateKeyConfig))
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	engineName := r.Context().Value(ctxKeyEngine).(string)
+	if engineName == "" {
+		log.Error(errors.New("http missing engine name", errors.CodeApiHTTPUpdateKeyConfigEngineName))
+		http.Error(w, "missing engine name", http.StatusBadRequest)
+		return
+	}
+	err := s.transit.UpdateKeyConfiguration(ctx, key, engineName, transit.KeyConfiguration{
+		MinDecryptionVersion: utils.NullInt64FromPtr(req.MinDecryptionVersion),
+		MinEncryptionVersion: utils.NullInt64FromPtr(req.MinEncryptionVersion),
+		DeletionAllowed:      utils.NullBoolFromPtr(req.DeletionAllowed),
+		Exportable:           utils.NullBoolFromPtr(req.Exportable),
+		AllowPlaintextBackup: utils.NullBoolFromPtr(req.AllowPlaintextBackup),
+	})
+	if err != nil {
+		log.Error(errors.Wrap(err, "http transit call update key config error", errors.CodeApiHTTPUpdateKeyConfig))
+		http.Error(w, "internal server error "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	successResponse(w, structs.Empty{})
+}
+
+func (s server) RotateKey(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	key := chi.URLParam(r, "key")
+	if key == "" {
+		log.Error(errors.New("key not found", errors.CodeApiHTTPRotateKeyReadKey))
+		http.Error(w, "key not found", http.StatusBadRequest)
+		return
+	}
+	var req structs.RotateRequest
+	if err := bind(r, &req); err != nil {
+		log.Error(errors.Wrap(err, "http rotate key bind error", errors.CodeApiHTTPRotateKey))
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	engineName := r.Context().Value(ctxKeyEngine).(string)
+	if engineName == "" {
+		log.Error(errors.New("http missing engine name", errors.CodeApiHTTPRotateKeyEngineName))
+		http.Error(w, "missing engine name", http.StatusBadRequest)
+		return
+	}
+	err := s.transit.Rotate(ctx, key, engineName)
+	if err != nil {
+		log.Error(errors.Wrap(err, "http transit call rotate key error", errors.CodeApiHTTPRotateKey))
+		http.Error(w, "internal server error "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	successResponse(w, structs.Empty{})
+}
+
+func (s server) ExportKey(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	keyType := chi.URLParam(r, "keyType")
+	if keyType == "" {
+		log.Error(errors.New("key type not found", errors.CodeApiHTTPExportKeyReadKeyType))
+		http.Error(w, "key not found", http.StatusBadRequest)
+		return
+	}
+	keyName := chi.URLParam(r, "keyName")
+	if keyName == "" {
+		log.Error(errors.New("key not found", errors.CodeApiHTTPExportKeyReadKeyName))
+		http.Error(w, "key not found", http.StatusBadRequest)
+		return
+	}
+	version := chi.URLParam(r, "version")
+	engineName := r.Context().Value(ctxKeyEngine).(string)
+	if engineName == "" {
+		log.Error(errors.New("http missing engine name", errors.CodeApiHTTPExportKeyEngineName))
+		http.Error(w, "missing engine name", http.StatusBadRequest)
+		return
+	}
+	export, err := s.transit.Export(ctx, keyName, engineName, keyType, version)
+	if err != nil {
+		log.Error(errors.Wrap(err, "http transit call export key error", errors.CodeApiHTTPExportKey))
+		http.Error(w, "internal server error "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	marshal, err := json.Marshal(export)
+	if err != nil {
+		log.Error(errors.Wrap(err, "http export key result marshal error", errors.CodeApiHTTPExportKey))
+		http.Error(w, "internal server error "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	successResponse(w, structs.ExportResult{
+		Result: string(marshal),
+	})
+}
+
+func (s server) BackupKey(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	keyName := chi.URLParam(r, "keyName")
+	if keyName == "" {
+		log.Error(errors.New("key not found", errors.CodeApiHTTPBackupKeyReadKeyName))
+		http.Error(w, "key not found", http.StatusBadRequest)
+		return
+	}
+	engineName := r.Context().Value(ctxKeyEngine).(string)
+	if engineName == "" {
+		log.Error(errors.New("http missing engine name", errors.CodeApiHTTPBackupKeyEngineName))
+		http.Error(w, "missing engine name", http.StatusBadRequest)
+		return
+	}
+	result, err := s.transit.Backup(ctx, keyName, engineName)
+	if err != nil {
+		log.Error(errors.Wrap(err, "http transit call backup key error", errors.CodeApiHTTPBackupKey))
+		http.Error(w, "internal server error "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	successResponse(w, structs.BackupResult{
+		Result: result,
+	})
+}
+
+func (s server) RestoreKey(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	keyName := chi.URLParam(r, "keyName")
+	if keyName == "" {
+		log.Error(errors.New("key not found", errors.CodeApiHTTPRestoreKeyReadKeyName))
+		http.Error(w, "key not found", http.StatusBadRequest)
+		return
+	}
+	var req structs.RestoreRequest
+	if err := bind(r, &req); err != nil {
+		log.Error(errors.Wrap(err, "http restore key bind error", errors.CodeApiHTTPRestoreKey))
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	engineName := r.Context().Value(ctxKeyEngine).(string)
+	if engineName == "" {
+		log.Error(errors.New("http missing engine name", errors.CodeApiHTTPRestoreKeyEngineName))
+		http.Error(w, "missing engine name", http.StatusBadRequest)
+		return
+	}
+	err := s.transit.Restore(ctx, keyName, engineName, req.Backup64, req.Force)
+	if err != nil {
+		log.Error(errors.Wrap(err, "http transit call restore key error", errors.CodeApiHTTPRestoreKey))
+		http.Error(w, "internal server error "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	successResponse(w, structs.Empty{})
+}
+
+func (s server) GenerateKey(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	keyType := chi.URLParam(r, "keyType")
+	if keyType == "" {
+		log.Error(errors.New("key type not found", errors.CodeApiHTTPGenerateKeyReadKeyType))
+		http.Error(w, "key not found", http.StatusBadRequest)
+		return
+	}
+	keyName := chi.URLParam(r, "keyName")
+	if keyName == "" {
+		log.Error(errors.New("key not found", errors.CodeApiHTTPGenerateKeyReadKeyName))
+		http.Error(w, "key not found", http.StatusBadRequest)
+		return
+	}
+	var req structs.GenerateKeyRequest
+	if err := bind(r, &req); err != nil {
+		log.Error(errors.Wrap(err, "http generate key bind error", errors.CodeApiHTTPGenerateKey))
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	engineName := r.Context().Value(ctxKeyEngine).(string)
+	if engineName == "" {
+		log.Error(errors.New("http missing engine name", errors.CodeApiHTTPGenerateKeyEngineName))
+		http.Error(w, "missing engine name", http.StatusBadRequest)
+		return
+	}
+	result, err := s.transit.GenerateKey(ctx, engineName, transit.GenerateRequest{
+		Name:       keyName,
+		Plaintext:  keyType,
+		Context:    null.NewString(req.Context, true),
+		Nonce:      null.NewString(req.Nonce, true),
+		Bits:       null.NewInt64(req.Bits, true),
+		KeyVersion: null.NewInt64(req.KeyVersion, true),
+	})
+	if err != nil {
+		log.Error(errors.Wrap(err, "http transit call generate key error", errors.CodeApiHTTPGenerateKey))
+		http.Error(w, "internal server error "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	successResponse(w, structs.GenerateKeyResponse{
+		Ciphertext: result.Ciphertext,
+		KeyVersion: result.KeyVersion,
+		Plaintext:  result.Plaintext,
+	})
+}
+
+func (s server) GenerateRandomBytes(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	bytesCountRaw := chi.URLParam(r, "bytesCount")
+	if bytesCountRaw == "" {
+		log.Error(errors.New("bytes count not found", errors.CodeApiHTTPGenerateRandomBytesBytesCountMissing))
+		http.Error(w, "bytes count not found", http.StatusBadRequest)
+		return
+	}
+	bytesCount, err := strconv.Atoi(bytesCountRaw)
+	if err != nil {
+		log.Error(errors.New("bytes count invalid format", errors.CodeApiHTTPGenerateRandomBytesBytesCountFormat))
+		http.Error(w, "bytes count not found", http.StatusBadRequest)
+		return
+	}
+	var req structs.GenerateBytesRequest
+	if err := bind(r, &req); err != nil {
+		log.Error(errors.Wrap(err, "http generate random bytes bind error", errors.CodeApiHTTPGenerateRandomBytes))
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	engineName := r.Context().Value(ctxKeyEngine).(string)
+	if engineName == "" {
+		log.Error(errors.New("http missing engine name", errors.CodeApiHTTPGenerateRandomBytesEngineName))
+		http.Error(w, "missing engine name", http.StatusBadRequest)
+		return
+	}
+	result, err := s.transit.GenerateRandomBytes(ctx, req.UrlBytes, req.Format, bytesCount)
+	if err != nil {
+		log.Error(errors.Wrap(err, "http transit call generate random bytes error", errors.CodeApiHTTPGenerateRandomBytes))
+		http.Error(w, "internal server error "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	successResponse(w, structs.GenerateBytesResponse{
+		Result: result,
+	})
+}
+
 type EncryptionServer interface {
 	chi.Router
 
@@ -400,6 +683,14 @@ type EncryptionServer interface {
 	GenerateHMAC(w http.ResponseWriter, r *http.Request)
 	Sign(w http.ResponseWriter, r *http.Request)
 	VerifySigned(w http.ResponseWriter, r *http.Request)
+	Rewrap(w http.ResponseWriter, r *http.Request)
+	UpdateKeyConfiguration(w http.ResponseWriter, r *http.Request)
+	RotateKey(w http.ResponseWriter, r *http.Request)
+	ExportKey(w http.ResponseWriter, r *http.Request)
+	BackupKey(w http.ResponseWriter, r *http.Request)
+	RestoreKey(w http.ResponseWriter, r *http.Request)
+	GenerateKey(w http.ResponseWriter, r *http.Request)
+	GenerateRandomBytes(w http.ResponseWriter, r *http.Request)
 	Health(w http.ResponseWriter, r *http.Request)
 
 	Init()

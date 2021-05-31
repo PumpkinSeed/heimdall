@@ -2,6 +2,7 @@ package dev
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/PumpkinSeed/heimdall/internal/errors"
 	"github.com/PumpkinSeed/heimdall/internal/logger"
@@ -11,6 +12,7 @@ import (
 	"github.com/PumpkinSeed/heimdall/pkg/crypto/utils"
 	"github.com/PumpkinSeed/heimdall/pkg/healthcheck"
 	"github.com/PumpkinSeed/heimdall/pkg/structs"
+	"github.com/emvi/null"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault"
@@ -212,6 +214,128 @@ func (d *devClient) VerifySigned(ctx context.Context, req *structs.VerificationR
 		return nil, errors.Wrap(err, "dev client sign error", errors.CodeClientDevVerifySign)
 	}
 	return verificationResult, err
+}
+
+func (d *devClient) Rewrap(ctx context.Context, in *structs.RewrapRequest) (*structs.CryptoResult, error) {
+	rewrap, err := d.transit.Rewrap(ctx, in.KeyName, defaultEngine, transit.BatchRequestItem{
+		Context:    in.Context,
+		Plaintext:  in.PlainText,
+		Nonce:      in.Nonce,
+		KeyVersion: int(in.KeyVersion),
+	})
+	if err != nil {
+		log.Debugf("Error rewrapping key %v", err)
+
+		return nil, errors.Wrap(err, "dev client rewrap error", errors.CodeClientDevRewrap)
+	}
+	return &structs.CryptoResult{
+		Result: rewrap.Ciphertext,
+	}, nil
+}
+
+func (d *devClient) UpdateKeyConfiguration(ctx context.Context, in *structs.KeyConfig) (*structs.Empty, error) {
+	err := d.transit.UpdateKeyConfiguration(ctx, in.KeyName, defaultEngine, transit.KeyConfiguration{
+		MinDecryptionVersion: utils.NullInt64FromPtr(in.MinDecryptionVersion),
+		MinEncryptionVersion: utils.NullInt64FromPtr(in.MinEncryptionVersion),
+		DeletionAllowed:      utils.NullBoolFromPtr(in.DeletionAllowed),
+		Exportable:           utils.NullBoolFromPtr(in.Exportable),
+		AllowPlaintextBackup: utils.NullBoolFromPtr(in.AllowPlaintextBackup),
+	})
+	if err != nil {
+		log.Debugf("Error update key config %v", err)
+
+		return nil, errors.Wrap(err, "dev client update key config error", errors.CodeClientDevUpdateKeyConfig)
+	}
+	return &structs.Empty{}, nil
+}
+
+func (d *devClient) RotateKey(ctx context.Context, in *structs.RotateRequest) (*structs.Empty, error) {
+	err := d.transit.Rotate(ctx, in.KeyName, defaultEngine)
+	if err != nil {
+		log.Debugf("Error rotate key %v", err)
+
+		return nil, errors.Wrap(err, "dev client rotate key error", errors.CodeClientDevRotate)
+	}
+	return &structs.Empty{}, nil
+}
+
+func (d *devClient) ExportKey(ctx context.Context, in *structs.ExportRequest) (*structs.ExportResult, error) {
+	export, err := d.transit.Export(ctx, in.KeyName, defaultEngine, in.ExportType, in.Version)
+	if err != nil {
+		log.Debugf("Error export key %v", err)
+
+		return nil, errors.Wrap(err, "dev client export key error", errors.CodeClientDevExport)
+	}
+
+	result, err := json.Marshal(export)
+	if err != nil {
+		log.Debugf("Error export key result marshal %v", err)
+
+		return nil, errors.Wrap(err, "dev client export key result marshal error", errors.CodeClientDevExport)
+	}
+
+	return &structs.ExportResult{
+		Result: string(result),
+	}, nil
+}
+
+func (d *devClient) BackupKey(ctx context.Context, in *structs.BackupRequest) (*structs.BackupResult, error) {
+	backup, err := d.transit.Backup(ctx, in.KeyName, defaultEngine)
+	if err != nil {
+		log.Debugf("Error backup key %v", err)
+
+		return nil, errors.Wrap(err, "dev client backup key error", errors.CodeClientDevBackup)
+	}
+
+	return &structs.BackupResult{
+		Result: backup,
+	}, nil
+}
+
+func (d *devClient) RestoreKey(ctx context.Context, in *structs.RestoreRequest) (*structs.Empty, error) {
+	err := d.transit.Restore(ctx, in.KeyName, defaultEngine, in.Backup64, in.Force)
+	if err != nil {
+		log.Debugf("Error restore key %v", err)
+
+		return nil, errors.Wrap(err, "dev client restore key error", errors.CodeClientDevRestore)
+	}
+
+	return &structs.Empty{}, nil
+}
+
+func (d *devClient) GenerateKey(ctx context.Context, in *structs.GenerateKeyRequest) (*structs.GenerateKeyResponse, error) {
+	result, err := d.transit.GenerateKey(ctx, defaultEngine, transit.GenerateRequest{
+		Name:       in.Name,
+		Plaintext:  in.Plaintext,
+		Context:    null.NewString(in.Context, true),
+		Nonce:      null.NewString(in.Nonce, true),
+		Bits:       null.NewInt64(in.Bits, true),
+		KeyVersion: null.NewInt64(in.KeyVersion, true),
+	})
+	if err != nil {
+		log.Debugf("Error generate key %v", err)
+
+		return nil, errors.Wrap(err, "dev client generate key error", errors.CodeClientDevGenerateKey)
+	}
+
+	return &structs.GenerateKeyResponse{
+		Ciphertext: result.Ciphertext,
+		KeyVersion: result.KeyVersion,
+		Plaintext:  result.Plaintext,
+	}, nil
+}
+
+func (d *devClient) GenerateRandomBytes(ctx context.Context, in *structs.GenerateBytesRequest) (*structs.GenerateBytesResponse, error) {
+	result, err := d.transit.GenerateRandomBytes(ctx, in.UrlBytes, in.Format, int(in.BytesCount))
+	if err != nil {
+		log.Debugf("Error generate key %v", err)
+
+		return nil, errors.Wrap(err, "dev client generate key error", errors.CodeClientDevGenerateRandomBytes)
+	}
+
+	return &structs.GenerateBytesResponse{
+		Result: result,
+	}, nil
 }
 
 func (d *devClient) Health(ctx context.Context, req *structs.HealthRequest) (*structs.HealthResponse, error) {
