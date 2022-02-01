@@ -1,4 +1,0 @@
-[submodule "vendor"]
-	path = vendor
-	url = git@github.com:PumpkinSeed/heimdall-vendor.git
-	branch = main
